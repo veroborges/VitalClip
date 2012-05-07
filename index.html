@@ -1,0 +1,477 @@
+<!--
+You are free to copy and use this sample in accordance with the terms of the
+Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>
+      VitalCLip History Visualization
+    </title>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript" src="http://datejs.googlecode.com/svn/trunk/build/date-en-US.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+
+    <script type="text/javascript">
+      google.load('visualization', '1', {packages: ['corechart']});
+    </script>
+    <script>
+      
+    </script>
+    <script type="text/javascript">
+      var queryURL = 'https://docs.google.com/spreadsheet/ccc?key=0At84zpBmO56cdDMwNG9xY2wzNWZMOXd2SjhSS0l1MkE'; //dummy data
+      var options; //graph options
+      var history; //line chart
+      var currentRangeText; //value of top date range (text)
+      var currentRange = "All";  //value of current range view
+      var timeFormat = "MMM dd, yyyy"; 
+      var data; //data as a dataTable
+      var dataView; //data as dataView to hide columns without changing underlying datatable
+      var MAX;
+      var MIN;
+      var prevButton;
+      var nextButton;
+      var calcCounter;
+      var dataByHour; 
+      var dataByHourView;
+      var extraText;
+      
+      
+      /***** drawVisualization *****
+       called on chart load.
+       retrieves data from spreadsheet and 
+       calls response handler 
+      *******/
+      function drawVisualization() {
+        currentRangeText = document.getElementById('currentRange');
+        prevButton = document.getElementById('prevDate');
+        nextButton = document.getElementById('nextDate');
+        extraText = document.getElementById('extraText');
+
+
+        
+        var query = new google.visualization.Query(queryURL);
+       
+        // Apply query language.
+        query.setQuery("Select A, B, C, D, E Order BY A");
+      
+        // Send the query with a callback function.
+        query.send(handleQueryResponse);
+      }
+      
+       /***** handleQueryResponse *****
+       response: obj resulting from data query
+       checks for errors on query response
+       forms dataTable and calls initial drawChart()
+       *******/
+       function handleQueryResponse(response) {
+       if (response.isError()) {
+        alert('Error in query: ' + response.getMessage() + ' ' + response.getDetailedMessage());
+        return;
+      }
+    
+
+      var initData = response.getDataTable();  
+      dataView = new google.visualization.DataView(initData);
+      dataView.setColumns([0,1]);
+      
+       calcCounter = 1;
+       for (i=2; i < (initData.getNumberOfColumns()); i++){
+         dataView.setColumns(dataView.getViewColumns().concat([i,{calc:convertToStressScale, type:'number', label:initData.getColumnLabel(i)}]));
+       }         
+
+         
+      data = dataView.toDataTable();
+         
+      dataDaily = new google.visualization.DataTable();
+      dataDaily.addColumn('date', 'Date');
+         
+      var start; var end; var oneDay;
+      var averages; var curr; var counter;
+         
+      for (i=0; i < data.getNumberOfRows();){
+        averages = [];
+        start = data.getValue(i, 0).clone();
+        start.set({millisecond: 00, second: 00, minute: 00, hour: 00});
+        end = start.clone().set({millisecond: 59, second: 59, minute: 59, hour: 23});
+        oneDay = data.getFilteredRows([{column: 0, minValue: start, maxValue: end}]);
+        
+        averages[0] = start.clone();
+        for (col = 1; col < data.getNumberOfColumns(); col++){
+          if (i==0){
+            dataDaily.addColumn(data.getColumnType(col), data.getColumnLabel(col));
+          }                  
+          averages[col] = 0;
+          counter = 0;
+          for (j = 0; j < oneDay.length; j++){
+            curr = data.getValue(oneDay[j], col);
+            if (curr != null){
+              averages[col] += curr;
+              counter++;
+            }
+          }
+          
+          averages[col] = averages[col]/counter;
+        }
+        
+        console.log(averages);
+        dataDaily.addRows([averages]);
+        i+= oneDay.length*3;       
+      }
+         
+         dataByHour = data.clone();
+         data = dataDaily.clone();
+         addExtraColumns(data);
+         addExtraColumns(dataByHour);
+         
+         databyHourView = new google.visualization.DataView(dataByHour);
+         databyHourView.setColumns([0,1,2,3]); 
+
+         dataView = new google.visualization.DataView(data);
+         dataView.setColumns([0,1,2,3]);   
+         console.log(dataView.getViewColumns());
+
+      
+      //options for default state of histogram
+         options = { animation: {duration: 1000, easing: 'in'}, //animation style
+                 hAxis: {viewWindowMode: 'explicit', 
+                            viewWindow: {min: dataView.getValue(0, 0), max: dataView.getValue(data.getNumberOfRows() - 1, 0)} //initial date range = all
+                        }, displayAnnotations: true, interpolateNulls: true, tooltip: {trigger: 'none'}
+                    }; 
+      
+      MAX = options.hAxis.viewWindow.max.clone();    
+      MIN = options.hAxis.viewWindow.min.clone();     
+         
+      history = new google.visualization.LineChart(document.getElementById('visualization'));
+         
+      drawChart();
+      google.visualization.events.addListener(history, 'select', selectHandler);
+
+       }
+
+      function drawChart(){   
+        prevButton.disabled = options.hAxis.viewWindow.min <= MIN;
+        nextButton.disabled = options.hAxis.viewWindow.max >= MAX; 
+        
+        switch(currentRange){
+          case "Day":
+            addAnnotation(dataByHour);
+            history.draw(databyHourView, options);
+            
+            currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat);
+            break;
+          default:
+            addAnnotation(data);
+            history.draw(dataView, options);
+            currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat) + " - " + options.hAxis.viewWindow.max.toString(timeFormat);
+
+        }
+
+      }
+      
+      function addAnnotation(dataTab){  
+          var column;
+          var annot = dataTab.getFilteredRows([{column: 2,  value: "Stress"}]);
+
+          var rows = dataTab.getFilteredRows([{column: 0,  minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
+          var halfValue = rows[Math.round((rows.length-1)/2)];
+          for (i=1; i< dataTab.getNumberOfColumns(); i++){
+              column = dataTab.getColumnLabel(i);
+              if (annot.length > 0)
+                dataTab.setValue(annot[0], i+1, "");  
+
+              dataTab.setValue(halfValue, i+1, column);  
+              i += 3;
+          }
+      }
+      
+      function addExtraColumns(dataTab){
+        for (i=1; i< dataTab.getNumberOfColumns(); i++){
+            dataTab.insertColumn(i+1, 'string', 'text');
+            dataTab.setColumnProperty(i+1, "role", "annotation");
+            dataTab.insertColumn(i+2, 'boolean', "certainty");
+            dataTab.setColumnProperty(i+2, "role", "certainty");
+         
+         var empty = dataTab.getFilteredRows([{column: i, value: null}]);
+         console.log(empty);
+         for (j=0; j< empty.length; j++){
+           dataTab.setValue(j, i+2, false);
+         }          
+        
+          //skip annotation column
+          i += 3;
+        }
+      }
+      
+     /***** changeRange *****
+      range= All/Month/Week/Day
+      onClick function for range radio buttons
+      changes date range of histogram and date text
+      Note: all ranges end at current max date value
+      *******/     
+      function changeRange(range){        
+        var min = options.hAxis.viewWindow.max.clone();
+        var max = options.hAxis.viewWindow.max.clone();
+
+        switch(range){
+          case currentRange:
+            break;
+          case "All":
+            min = MIN;
+            max = MAX; 
+            break;
+          case "Month":
+            min.addMonths(-1);
+            break;
+          case "Week":
+            min.addWeeks(-1); 
+            break;
+          case "Day":
+            min.set({millisecond: 00, second: 00, minute: 00, hour: 00});
+            max.set({millisecond: 59, second: 59, minute: 59, hour: 23});
+            setDayView();
+            break;
+          default:
+        } 
+        
+        options.hAxis.viewWindow.min = min; 
+        options.hAxis.viewWindow.max = max; 
+
+        if (currentRange == "Day" && range != "Day"){
+          removeDayView();
+        }
+        
+        currentRange = range;
+        drawChart();
+      }
+      
+      function removeDayView(){
+        document.getElementById('tempToggle').disabled = false;
+        document.getElementById('sleepToggle').disabled = false;
+        document.getElementById('sleepToggle').checked = false;
+        document.getElementById('tempToggle').checked = false;
+        
+        cols = dataView.getViewColumns();
+        
+       for(var i=0; i< cols.length; i++) {
+         if (cols[i] == 9) 
+           document.getElementById('sleepToggle').checked = "checked";
+         if (cols[i] == 13) 
+           document.getElementById('tempToggle').checked = "checked";
+      }
+      }
+      
+      function setDayView(){
+        document.getElementById('sleepToggle').checked = true;
+        document.getElementById('sleepToggle').disabled = true;
+        document.getElementById('tempToggle').checked = true;
+        document.getElementById('tempToggle').disabled = true;
+        
+        databyHourView.hideColumns([9,10,11,13,14,15]);
+        day = data.getFilteredRows([{column: 0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
+        console.log("Daaaay" + day);
+        var text = "<ul>";
+        text += "<li><h3>Sleep:</h3>" + data.getValue(day[0], 8) + "</li>";
+        text += "<li><h3>Temp:</h3>" + data.getValue(day[0], 12) + "</li>";
+        text += "</ul>";
+        
+        extraText.innerHTML = text;
+      }
+      
+      
+     /***** changeDate *****
+      dir: -1 for prev, 1 for next
+      onClick function for prev and next buttons
+      changes date range of histogram and date text
+     *******/
+     function changeDate(dir){
+        var min = options.hAxis.viewWindow.min.clone();
+        var max = options.hAxis.viewWindow.max.clone();
+
+        switch(currentRange){
+          case "Month":
+            min.addMonths(dir);
+            max.addMonths(dir);
+            break;
+          case "Week":
+            min.addWeeks(dir);
+            max.addWeeks(dir);
+            break;
+          case "Day":
+            min.addDays(dir);
+            max.addDays(dir);
+            break;
+          default: 
+        } 
+       
+        options.hAxis.viewWindow.min = min; 
+        options.hAxis.viewWindow.max = max; 
+        drawChart();
+      }
+      
+      function checkFactors(ele){
+            if (ele.checked){
+              dataView.setColumns(dataView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
+              databyHourView.setColumns(dataView.getViewColumns());
+            }else{
+              dataView.hideColumns([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]);
+              databyHourView.setColumns(dataView.getViewColumns());
+            }       
+            drawChart();
+      }
+    
+      function filterByStress(ele){
+        var min;
+        var max;
+        switch(ele.id){
+          case 'highStress':
+            min = 8;
+            max = 10;
+            break;
+          case 'lowStress':
+            min = 0;
+            max = 3;
+            break;
+          default:
+        }
+            
+        var selected= []
+        var currView; var currdata;
+        if (currentRange == "Day"){
+          currView = dataByHourView;
+          currData = dataByHour;
+        }else{
+          currView = dataView;
+          currData = data;
+        }
+        
+        var inRange = currView.getFilteredRows([{column: 1, minValue: min, maxValue: max}]);
+        for(i=0; i<inRange.length; i++){
+          selected.push({row: inRange[i], column:1});
+        }
+        
+        history.setSelection(selected);
+          
+        var averages = {};
+        var label;
+        for (col = 2; col < currData.getNumberOfColumns(); col++){
+          label = currData.getColumnLabel(col);
+          averages[label] = 0;
+          counter = 0;
+          for (j = 0; j < selected.length; j++){
+            curr = currData.getValue(selected[j].row, col);
+            if (curr != null){
+              averages[label] += curr;
+              counter++;
+            }
+          }
+          
+          averages[label] = averages[label]/counter;
+        }
+      
+        var text = "<ul>";
+        for (var fact in averages){
+          text += "<li><h3>" + fact + ":</h3>" + averages[fact] + "</li>";
+
+        }
+    
+        text += "</ul>";
+        extraText.innerHTML = text;
+
+        
+        console.log(averages);
+          //drawChart();
+      }
+      
+     
+      function convertToStressScale(dataTable, rowNum){
+        calcCounter < (dataTable.getNumberOfColumns()- 1) ? calcCounter++ : calcCounter = 2;
+        
+        var range = dataTable.getColumnRange(calcCounter);
+        var currVal = dataTable.getValue(rowNum, calcCounter);
+        if (currVal == null)
+          return null;
+        if (range.max <= 10 && range.min >= 0){ //TODO: what scaling is appropriate when scale is smaller (sleep)? 
+          return currVal;      
+        }else{  
+        return (((10)*(currVal - range.min))/(range.max - range.min) + calcCounter*3);
+        }
+      }
+      
+      function createAnnotations(dataTable, rowNum){
+         var halfValue = Math.round(dataTable.getNumberOfRows()/2);
+         if (rowNum == halfValue)
+           return "Stress";
+        else
+          return "";
+
+        
+      }
+      
+      function selectHandler(e){
+        console.log("select");
+
+        var ele = history.getSelection();
+        
+        if (ele.length == 0){
+          console.log("Deeeselected");
+        }
+        else{
+          console.log(ele[0].column);
+          var label = dataView.getColumnLabel(ele[0].column);
+          console.log(label);
+          
+          if (label == "text"){
+            drawFactorBaseline(ele[0].column, ele[0].row);
+          }
+        }
+        }
+      
+      
+      function drawFactorBaseline(col, row){
+        console.log(dataView.getColumnLabel(col-1));
+        //options.vAxis.viewWindow.min = Math.min(data.getColumnRange(col-1).min, 0);
+        drawChart();
+        //dataView.setColumns([0, col - 1, col]);
+        history.setSelection([{column: col, row: row}]);
+      }
+      
+    google.setOnLoadCallback(drawVisualization);
+    </script>
+    <style> 
+      button:disabled{
+        display: none;
+      }
+      
+      input[type="radio"]{
+        display: inline; 
+      }
+      
+ 
+      </style>
+  </head>
+  <body style="font-family: Arial;border: 0 none;">
+    <div name="rangeSelect">
+      <input type="radio" name="range" value="All" checked onClick="changeRange(this.value)">All</input>
+      <input type="radio" name="range" value="Month" onClick="changeRange(this.value)"> Month</input>
+      <input type="radio" name="range" value="Week" onClick="changeRange(this.value)"> Week</input>
+      <input type="radio" name="range" value="Day" onClick="changeRange(this.value)"> Day</input>
+     </div>
+    <button type="button" id="prevDate" onClick="changeDate(-1)" >prev</button>
+    <span id="currentRange"></span>
+    <button type="button" id="nextDate" onClick="changeDate(1)">next</button><br/><br/>
+    <form id="formFactor">
+    <input type="checkbox"  value="1" disabled="disabled" checked="checked">Stress</input>
+    <input type="checkbox"  value="5" onClick="checkFactors(this)">Heart Rate</input>
+    <input type="checkbox"  id="sleepToggle" value="9" onClick="checkFactors(this)">Sleep</input>
+    <input type="checkbox"  id="tempToggle" value="13" onClick="checkFactors(this)">Temperature</input>
+    </form><br/>
+    <button type="button" id="highStress" onClick="filterByStress(this)" >High Stress</button>
+    <button type="button" id="lowStress" onClick="filterByStress(this)">Low Stress</button>
+    <div id="visualization" style="width: 700px; height: 400px; "></div>
+    <div id="extraText"></div>
+
+  </body>
+</html>
