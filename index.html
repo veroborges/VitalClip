@@ -347,7 +347,9 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
           currData = data;
         }
         
-        var inRange = currView.getFilteredRows([{column: 1, minValue: min, maxValue: max}]);
+        //filter by date range being viewed and stress range selected
+        var inRange = currView.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
+                                                {column: 1, minValue: min, maxValue: max}]);
         for(i=0; i<inRange.length; i++){
           selected.push({row: inRange[i], column:1});
         }
@@ -356,7 +358,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
           
         var averages = {};
         var label;
-        for (col = 2; col < currData.getNumberOfColumns(); col++){
+        for (col = 4; col < currData.getNumberOfColumns(); col += 4){
           label = currData.getColumnLabel(col);
           averages[label] = 0;
           counter = 0;
