@@ -37,7 +37,11 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
       var dataByHour; 
       var dataByHourView;
       var extraText;
-      
+	
+	  /***hard coded column values and units***/
+	  var colDir = {"Stress" : 1, "Heart Rate" : 4, "Sleep" : 8, "Temperature" : 12};
+	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "C"};
+	
       
       /***** drawVisualization *****
        called on chart load.
@@ -145,13 +149,18 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
       MIN = options.hAxis.viewWindow.min.clone();     
          
       history = new google.visualization.LineChart(document.getElementById('visualization'));
-         
-      drawChart();
-      google.visualization.events.addListener(history, 'select', selectHandler);
+		  
+		google.visualization.events.addListener(history, 'select', function () {
+			   selectHandler();
+		       $("#visualization").find("iframe").contents().find("body").find('svg').click(testHandler);});
 
-       }
+	      // google.visualization.events.addListener(history, 'select', selectHandler);
+    
+		drawChart();
+ }
 
       function drawChart(){   
+	
         prevButton.disabled = options.hAxis.viewWindow.min <= MIN;
         nextButton.disabled = options.hAxis.viewWindow.max >= MAX; 
         
@@ -168,7 +177,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
             currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat) + " - " + options.hAxis.viewWindow.max.toString(timeFormat);
 
         }
-
       }
       
       function addAnnotation(dataTab){  
@@ -318,7 +326,9 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
             }else{
               dataView.hideColumns([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]);
               databyHourView.setColumns(dataView.getViewColumns());
-            }       
+            }    
+
+   
             drawChart();
       }
     
@@ -412,22 +422,33 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
         
       }
       
+	  function testHandler(e){
+		console.log("ASdssdadasadsadsads");
+        $("#testOverlay").css("left", e.pageX);
+        $("#testOverlay").css("top", e.pageY + 75);
+	}
+	
       function selectHandler(e){
-        console.log("select");
-
-        var ele = history.getSelection();
         
+        var ele = history.getSelection();
+        console.log("SAS:" + ele);
         if (ele.length == 0){
           console.log("Deeeselected");
+		  $("#testOverlay").hide();
+		  $("#testOverlay").html("");
         }
-        else{
-          console.log(ele[0].column);
-          var label = dataView.getColumnLabel(ele[0].column);
-          console.log(label);
+        else{	      
+		  var label = dataView.getColumnLabel(ele[0].column);
           
           if (label == "text"){
-            drawFactorBaseline(ele[0].column, ele[0].row);
+          //  drawFactorBaseline(ele[0].column, ele[0].row);
           }
+		  else{
+			  console.log("col" + ele[0].column);						
+			  $("#testOverlay").show();
+			  value = data.getValue(ele[0].row, colDir[label]);
+		   	  $("#testOverlay").html(value + unitDir[label]);
+		}
         }
         }
       
@@ -451,8 +472,17 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
         display: inline; 
       }
       
- 
-      </style>
+ 		#testOverlay{
+			-moz-border-radius: 5px;
+			border-radius: 5px;
+			position: absolute;
+			background-color: #464646;
+			padding: 5px;
+			color: white;
+			font-size: 12px;
+	}
+</style>
+
   </head>
   <body style="font-family: Arial;border: 0 none;">
     <div name="rangeSelect">
@@ -473,6 +503,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
     <button type="button" id="highStress" onClick="filterByStress(this)" >High Stress</button>
     <button type="button" id="lowStress" onClick="filterByStress(this)">Low Stress</button>
     <div id="visualization" style="width: 700px; height: 400px; "></div>
+	<div id="testOverlay">
+	</div>
     <div id="extraText"></div>
 
   </body>
