@@ -37,6 +37,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
       var dataByHour; 
       var dataByHourView;
       var extraText;
+	  var currData;
+	  var currView;
 	
 	  /***hard coded column values and units***/
 	  var colDir = {"Stress" : 1, "Heart Rate" : 4, "Sleep" : 8, "Temperature" : 12};
@@ -53,8 +55,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
         prevButton = document.getElementById('prevDate');
         nextButton = document.getElementById('nextDate');
         extraText = document.getElementById('extraText');
-
-
         
         var query = new google.visualization.Query(queryURL);
        
@@ -117,7 +117,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
             }
           }
           
-          averages[col] = averages[col]/counter;
+          averages[col] = Math.round(averages[col]/counter*10)/10;
         }
         
         console.log(averages);
@@ -139,20 +139,27 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 
       
       //options for default state of histogram
-         options = { animation: {duration: 1000, easing: 'in'}, //animation style
-                 hAxis: {viewWindowMode: 'explicit', 
-                            viewWindow: {min: dataView.getValue(0, 0), max: dataView.getValue(data.getNumberOfRows() - 1, 0)} //initial date range = all
-                        }, displayAnnotations: true, interpolateNulls: true, tooltip: {trigger: 'none'}
+         options = { strictFirstColumnType: true, animation: {duration: 1000, easing: 'in'}, 
+					chartArea : {width: 465, height: 245, top: 5, left: 10}, focusTarget : "category", 
+                 	hAxis: { format:'MM/dd/yy', viewWindowMode: 'explicit', gridlines: {color: "#dbdad5"}, 
+                   	viewWindow: {min: dataView.getValue(0, 0), max: dataView.getValue(data.getNumberOfRows() - 1, 0)}}, //initial date range = all
+               		displayAnnotations: true, tooltip: {trigger: 'none'},
+					backgroundColor: {fill: "white"},
+					vAxis: { gridlines: {count: 0}, viewWindowMode: 'explicit', viewWindow : {min: 0}}
                     }; 
       
       MAX = options.hAxis.viewWindow.max.clone();    
       MIN = options.hAxis.viewWindow.min.clone();     
          
       history = new google.visualization.LineChart(document.getElementById('visualization'));
-		  
+	 
+	  currData = data;
+	  currView = dataView;
+	
 		google.visualization.events.addListener(history, 'select', function () {
+		       $("#visualization").find("iframe").contents().find("body").find('svg').click(testHandler);
 			   selectHandler();
-		       $("#visualization").find("iframe").contents().find("body").find('svg').click(testHandler);});
+		});
 
 	      // google.visualization.events.addListener(history, 'select', selectHandler);
     
@@ -163,35 +170,33 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	
         prevButton.disabled = options.hAxis.viewWindow.min <= MIN;
         nextButton.disabled = options.hAxis.viewWindow.max >= MAX; 
+        addAnnotation();
         
         switch(currentRange){
           case "Day":
-            addAnnotation(dataByHour);
-            history.draw(databyHourView, options);
-            
+            history.draw(databyHourView, options);       
             currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat);
             break;
           default:
-            addAnnotation(data);
             history.draw(dataView, options);
             currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat) + " - " + options.hAxis.viewWindow.max.toString(timeFormat);
-
         }
+
+
       }
       
-      function addAnnotation(dataTab){  
+      function addAnnotation(){  
           var column;
-          var annot = dataTab.getFilteredRows([{column: 2,  value: "Stress"}]);
+          var annot = currData.getFilteredRows([{column: 2,  value: "Stress"}]);
 
-          var rows = dataTab.getFilteredRows([{column: 0,  minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
+          var rows = currData.getFilteredRows([{column: 0,  minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
           var halfValue = rows[Math.round((rows.length-1)/2)];
-          for (i=1; i< dataTab.getNumberOfColumns(); i++){
-              column = dataTab.getColumnLabel(i);
+          for (i=1; i< currData.getNumberOfColumns(); i+=4){
+              column = currData.getColumnLabel(i);
               if (annot.length > 0)
-                dataTab.setValue(annot[0], i+1, "");  
+                currData.setValue(annot[0], i+1, "");  
 
-              dataTab.setValue(halfValue, i+1, column);  
-              i += 3;
+              currData.setValue(halfValue, i+1, column);  
           }
       }
       
@@ -202,10 +207,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
             dataTab.insertColumn(i+2, 'boolean', "certainty");
             dataTab.setColumnProperty(i+2, "role", "certainty");
          
-         var empty = dataTab.getFilteredRows([{column: i, value: null}]);
+         var empty = dataTab.getFilteredRows([{column: i, value: 0}]);
          console.log(empty);
          for (j=0; j< empty.length; j++){
-           dataTab.setValue(j, i+2, false);
+           dataTab.setValue(empty[j], i+2, false);
          }          
         
           //skip annotation column
@@ -237,8 +242,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
             min.addWeeks(-1); 
             break;
           case "Day":
-            min.set({millisecond: 00, second: 00, minute: 00, hour: 00});
-            max.set({millisecond: 59, second: 59, minute: 59, hour: 23});
+            options.hAxis.viewWindow.min = min.set({millisecond: 00, second: 00, minute: 00, hour: 00});
+            options.hAxis.viewWindow.max = max.set({millisecond: 59, second: 59, minute: 59, hour: 23});
             setDayView();
             break;
           default:
@@ -269,6 +274,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
          if (cols[i] == 13) 
            document.getElementById('tempToggle').checked = "checked";
       }
+
+		
+		currData = data;
+		currView = dataView;
       }
       
       function setDayView(){
@@ -279,13 +288,18 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
         
         databyHourView.hideColumns([9,10,11,13,14,15]);
         day = data.getFilteredRows([{column: 0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
-        console.log("Daaaay" + day);
+        console.log("Daaaay");
         var text = "<ul>";
         text += "<li><h3>Sleep:</h3>" + data.getValue(day[0], 8) + "</li>";
         text += "<li><h3>Temp:</h3>" + data.getValue(day[0], 12) + "</li>";
         text += "</ul>";
         
         extraText.innerHTML = text;
+		options.hAxis.format = "hh:mm";
+		
+		currData = dataByHour;
+		currView = databyHourView;
+
       }
       
       
@@ -320,6 +334,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
       }
       
       function checkFactors(ele){
+		  $("#testOverlay").hide();
+	
             if (ele.checked){
               dataView.setColumns(dataView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
               databyHourView.setColumns(dataView.getViewColumns());
@@ -327,12 +343,14 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
               dataView.hideColumns([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]);
               databyHourView.setColumns(dataView.getViewColumns());
             }    
-
+			
    
             drawChart();
+			console.log(dataView.getViewColumns());
       }
     
       function filterByStress(ele){
+		$("#testOverlay").hide();
         var min;
         var max;
         switch(ele.id){
@@ -347,15 +365,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
           default:
         }
             
-        var selected= []
-        var currView; var currdata;
-        if (currentRange == "Day"){
-          currView = dataByHourView;
-          currData = dataByHour;
-        }else{
-          currView = dataView;
-          currData = data;
-        }
+        var selected= [];
         
         //filter by date range being viewed and stress range selected
         var inRange = currView.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
@@ -406,7 +416,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
         if (currVal == null)
           return null;
         if (range.max <= 10 && range.min >= 0){ //TODO: what scaling is appropriate when scale is smaller (sleep)? 
-          return currVal;      
+          return currVal + 8;      
         }else{  
         return (((10)*(currVal - range.min))/(range.max - range.min) + calcCounter*3);
         }
@@ -423,35 +433,66 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
       }
       
 	  function testHandler(e){
-		console.log("ASdssdadasadsadsads");
-        $("#testOverlay").css("left", e.pageX);
-        $("#testOverlay").css("top", e.pageY + 75);
+        $("#testOverlay").css("left", e.pageX + 10);
+        $("#testOverlay").css("top", e.pageY + 84);
 	}
 	
-      function selectHandler(e){
-        
+      function selectHandler(e){     
         var ele = history.getSelection();
-        console.log("SAS:" + ele);
+        console.log("SAS:" + ele.length);
         if (ele.length == 0){
           console.log("Deeeselected");
+  		  $("#testOverlay").unbind("click");
 		  $("#testOverlay").hide();
 		  $("#testOverlay").html("");
-        }
-        else{	      
-		  var label = dataView.getColumnLabel(ele[0].column);
-          
-          if (label == "text"){
-          //  drawFactorBaseline(ele[0].column, ele[0].row);
-          }
-		  else{
-			  console.log("col" + ele[0].column);						
+        }	    
+		else{
 			  $("#testOverlay").show();
-			  value = data.getValue(ele[0].row, colDir[label]);
-		   	  $("#testOverlay").html(value + unitDir[label]);
-		}
+			  var label;
+			  var day = currData.getFormattedValue(ele[0].row, 0);
+			  var htmlText = "<span><b>" + day + "</b></span><br/>";
+			  var cols = currView.getViewColumns();
+			  console.log("col: " + cols);
+			  for (i=0; i< cols.length; i++){
+				label = currData.getColumnLabel(cols[i]);
+				if (label != "text" && label != "certainty" && label !="Date"){
+					value = currData.getValue(ele[0].row, colDir[label]);
+		   	  		htmlText += "<span>" + label + " ~ " + value + unitDir[label] + "</span><br/>";
+				}
+			}
+			
+			   $("#testOverlay").html(htmlText);
+			  $("#testOverlay").click(function(e){
+				selectPopUpHandler(e, currData.getValue(ele[0].row, 0));
+			});
         }
         }
-      
+
+	  function selectPopUpHandler(e, date){	
+		options.hAxis.viewWindow.max = date.clone();
+		$('#DayRad').prop('checked', true);
+  		  $("#testOverlay").unbind("click");
+		  $("#testOverlay").hide();
+		  $("#testOverlay").html("");
+		changeRange("Day");
+		
+		
+		// switch(currentRange){
+		//    case "Week":
+		// 		options.hAxis.viewWindow.max = date.clone();
+		// 		changeRange("Day");
+		// 		break;
+		// 	case "All":	
+		// 	case "Month":
+		// 		end = date.clone().addDays(3);
+		// 		end = Date.compare(end, MAX) == 1 ? MAX : end;
+		// 		options.hAxis.viewWindow.max = end;
+		// 		changeRange("Week");
+		// 		break;
+		// 	default:
+		// }
+		
+	   }
       
       function drawFactorBaseline(col, row){
         console.log(dataView.getColumnLabel(col-1));
@@ -476,7 +517,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			-moz-border-radius: 5px;
 			border-radius: 5px;
 			position: absolute;
-			background-color: #464646;
+			background-color: rgba(109,109,109,0.9);
 			padding: 5px;
 			color: white;
 			font-size: 12px;
@@ -486,10 +527,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
   </head>
   <body style="font-family: Arial;border: 0 none;">
     <div name="rangeSelect">
-      <input type="radio" name="range" value="All" checked onClick="changeRange(this.value)">All</input>
-      <input type="radio" name="range" value="Month" onClick="changeRange(this.value)"> Month</input>
-      <input type="radio" name="range" value="Week" onClick="changeRange(this.value)"> Week</input>
-      <input type="radio" name="range" value="Day" onClick="changeRange(this.value)"> Day</input>
+      <input type="radio" name="range" id="AllRad" value="All" checked="checked" onClick="changeRange(this.value)">All</input>
+      <input type="radio" name="range" id="MonthRad" value="Month" onClick="changeRange(this.value)"> Month</input>
+      <input type="radio" name="range" id="WeekRad" value="Week" onClick="changeRange(this.value)"> Week</input>
+      <input type="radio" name="range" id="DayRad" value="Day" onClick="changeRange(this.value)"> Day</input>
      </div>
     <button type="button" id="prevDate" onClick="changeDate(-1)" >prev</button>
     <span id="currentRange"></span>
@@ -502,9 +543,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
     </form><br/>
     <button type="button" id="highStress" onClick="filterByStress(this)" >High Stress</button>
     <button type="button" id="lowStress" onClick="filterByStress(this)">Low Stress</button>
-    <div id="visualization" style="width: 700px; height: 400px; "></div>
-	<div id="testOverlay">
-	</div>
+    <div id="visualization" style="width: 480px; height: 320px; "></div>
+	<div id="testOverlay"></div>
     <div id="extraText"></div>
 
   </body>
