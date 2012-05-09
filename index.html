@@ -41,7 +41,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  var currView;
 	
 	  /***hard coded column values and units***/
-	  var colDir = {"Stress" : 1, "Heart Rate" : 4, "Sleep" : 8, "Temperature" : 12};
+	  var colDir = {"Stress" : 1, "Heart Rate" : 5, "Sleep" : 9, "Temperature" : 13};
 	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "C"};
 	  var colorDir = {"Stress" : "grey", "Heart Rate" : "#e15b4f", "Sleep" : "#5091b9", "Temperature" : "#86b45c", "Mood" : "#6058ab"};
 	
@@ -81,10 +81,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 
 	  var initData = response.getDataTable();  
 	  dataView = new google.visualization.DataView(initData);
-	  dataView.setColumns([0,1]);
+	  dataView.setColumns([0]);
 	  
-	   calcCounter = 1;
-	   for (i=2; i < (initData.getNumberOfColumns()); i++){
+	   calcCounter = 0;
+	   for (i=1; i < (initData.getNumberOfColumns()); i++){
 		 dataView.setColumns(dataView.getViewColumns().concat([i,{calc:convertToStressScale, type:'number', label:initData.getColumnLabel(i)}]));
 	   }		 
 
@@ -96,7 +96,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		 
 	  var start; var end; var oneDay;
 	  var averages; var curr; var counter;
-		 
+	  var firstReading; var reading; var newCounter;
 	  for (i=0; i < data.getNumberOfRows();){
 		averages = [];
 		start = data.getValue(i, 0).clone();
@@ -108,7 +108,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		for (col = 1; col < data.getNumberOfColumns(); col++){
 		  if (i==0){
 			dataDaily.addColumn(data.getColumnType(col), data.getColumnLabel(col));
-		  }					 
+		  }			
+				 
 		  averages[col] = 0;
 		  counter = 0;
 		  for (j = 0; j < oneDay.length; j++){
@@ -119,7 +120,28 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			}
 		  }
 		  
-		  averages[col] = Math.round(averages[col]/counter*10)/10;
+		   //todo: fix to be null not zero
+	      if (averages[col] != 0){
+		  	averages[col] = Math.round(averages[col]/counter*10)/10;
+		  }else{
+			averages[col] = null;
+		 }
+		}
+		
+		firstReading = start.clone();
+		reading = data.getValue(oneDay[0], 0);
+		if (Date.compare(firstReading, reading) == -1){
+	 		data.insertRows(oneDay[0], 1);
+	 		data.setValue(oneDay[0], 0, firstReading);
+			i++;
+		}
+		
+		firstReading = end.clone();
+		reading = data.getValue(oneDay[oneDay.length-1], 0);
+		if (Date.compare(firstReading,  reading) == -1){
+	 		data.insertRows(oneDay[oneDay.length], 1);
+	 		data.setValue(oneDay[oneDay.length], 0, firstReading);
+			i++;
 		}
 		
 		console.log(averages);
@@ -133,23 +155,20 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		 addExtraColumns(dataByHour);
 		 
 		 databyHourView = new google.visualization.DataView(dataByHour);
-		 databyHourView.setColumns([0,1,2,3]); 
+		 databyHourView.setColumns([0,2,3,4]); 
 
 		 dataView = new google.visualization.DataView(data);
-		 dataView.setColumns([0,1,2,3]);   
-		 console.log(dataView.getViewColumns());
-
+		 dataView.setColumns([0,2,3,4]);   
 	  
 	  //options for default state of histogram
 		 options = { strictFirstColumnType: true, animation: {duration: 1000, easing: 'in'}, 
-					chartArea : {width: 465, height: 245, top: 5, left: 10}, focusTarget : "category", 
-					hAxis: { format:'MM/dd/yy', viewWindowMode: 'explicit', gridlines: {color: "#dbdad5", count: 10}, 
+					chartArea : {width: 460, height: 245, top: 5, left: 10}, focusTarget : "category", 
+					hAxis: { format:'MM/dd/yy', viewWindowMode: 'explicit', gridlines: {color: "#dbdad5", count: 24}, 
 					viewWindow: {min: dataView.getValue(0, 0), max: dataView.getValue(data.getNumberOfRows() - 1, 0)}}, //initial date range = all
 					displayAnnotations: true, tooltip: {trigger: 'none'}, curve: "function",
 					backgroundColor: {fill: "white"},
 					vAxis: { gridlines: {count: 0}, viewWindowMode: 'pretty', viewWindow : {min: 0}},
-					series: [{color: 'grey'}]
-					}; 
+					series: [{color: 'grey'}] }; 
 	  
 	  MAX = options.hAxis.viewWindow.max.clone();	 
 	  MIN = options.hAxis.viewWindow.min.clone();	  
@@ -190,34 +209,46 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 	  function addAnnotation(){	 
 		  var column;
-		  var annot = currData.getFilteredRows([{column: 2,	 value: "Stress"}]);
-
+		  var annot = currData.getFilteredRows([{column: 3,	 value: "Stress"}]);
 		  var rows = currData.getFilteredRows([{column: 0,	minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
 		  var halfValue = rows[Math.round((rows.length-1)/2)];
-		  for (i=1; i< currData.getNumberOfColumns(); i+=4){
+		  for (i=2; i< currData.getNumberOfColumns();){
 			  column = currData.getColumnLabel(i);
-			  if (annot.length > 0)
-				currData.setValue(annot[0], i+1, "");  
-
-			  currData.setValue(halfValue, i+1, column);  
+			  console.log(column);
+			  if (annot.length > 0){
+				currData.setValue(annot[0], i + 1, "");  
+			}
+			  console.log(currData.getColumnLabel(i+1));
+			  currData.setValue(halfValue, i + 1, column);  
+			  i += 4;
 		  }
 	  }
 	  
 	  function addExtraColumns(dataTab){
-		for (i=1; i< dataTab.getNumberOfColumns(); i++){
+		console.log("columns" + dataTab.getNumberOfColumns());
+		for (i=2; i< dataTab.getNumberOfColumns();){
 			dataTab.insertColumn(i+1, 'string', 'text');
 			dataTab.setColumnProperty(i+1, "role", "annotation");
 			dataTab.insertColumn(i+2, 'boolean', "certainty");
 			dataTab.setColumnProperty(i+2, "role", "certainty");
 		 
-		 var empty = dataTab.getFilteredRows([{column: i, value: 0}]);
-		 console.log(empty);
-		 for (j=0; j< empty.length; j++){
-		   dataTab.setValue(empty[j], i+2, false);
-		 }			
+		 	var empty = dataTab.getFilteredRows([{column: i, value: null}]);
+
+			var day; var val;
+		 	for (j=0; j< empty.length; j++){
+				day = dataTab.getValue(empty[j], 0);
+				if (Date.compare(day, day.clone().set({millisecond: 00, second: 00, minute: 00, hour: 00})) == 0){
+					val = dataTab.getValue(Math.min(dataTab.getNumberOfRows(),empty[j]+1), i);
+				}else{
+					val = dataTab.getValue(Math.max(0,empty[j]-1), i);
+				}
+				
+				dataTab.setValue(empty[j], i, val);
+		   		dataTab.setValue(empty[j], i+2, false);
+		 	}			
 		
-		  //skip annotation column
-		  i += 3;
+		  	//skip annotation and certainty column
+		  	i += 4;
 		}
 	  }
 	  
@@ -292,16 +323,16 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		document.getElementById('tempToggle').checked = true;
 		document.getElementById('tempToggle').disabled = true;
 		
-		databyHourView.hideColumns([9,10,11,13,14,15]);
+		databyHourView.hideColumns([10,11,13,14,15,16]);
 		day = data.getFilteredRows([{column: 0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
 		console.log("Daaaay");
 		var text = "<ul>";
-		text += "<li><h3>Sleep:</h3>" + data.getValue(day[0], 8) + "</li>";
-		text += "<li><h3>Temp:</h3>" + data.getValue(day[0], 12) + "</li>";
+		text += "<li><span>Average Sleep: " + data.getValue(day[0], colDir["Sleep"]) + " hours</span></li>";
+		text += "<li><span>Average Temp: " + data.getValue(day[0], colDir["Temperature"]) + unitDir["Temperature"] +"</span></li>";
 		text += "</ul>";
 		
 		extraText.innerHTML = text;
-		options.hAxis.format = "hh:mmk";
+		options.hAxis.format = "ha";
 		
 		currData = dataByHour;
 		currView = databyHourView;
@@ -402,7 +433,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		  
 		var averages = {};
 		var label;
-		for (col = 4; col < currData.getNumberOfColumns(); col += 4){
+		for (col = 5; col < currData.getNumberOfColumns(); col += 4){
 		  label = currData.getColumnLabel(col);
 		  averages[label] = 0;
 		  counter = 0;
@@ -433,29 +464,20 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 	 
 	  function convertToStressScale(dataTable, rowNum){
-		calcCounter < (dataTable.getNumberOfColumns()- 1) ? calcCounter++ : calcCounter = 2;
+		calcCounter < (dataTable.getNumberOfColumns()- 1) ? calcCounter++ : calcCounter = 1;
 		
 		var range = dataTable.getColumnRange(calcCounter);
 		var currVal = dataTable.getValue(rowNum, calcCounter);
 		if (currVal == null)
 		  return null;
-		if (range.max <= 10 && range.min >= 0){ //TODO: what scaling is appropriate when scale is smaller (sleep)? 
-		  return currVal + 8;	   
+		if ((range.max <= 10 && range.min >= 0) || (dataTable.getColumnLabel(calcCounter) == "Stress")){ 
+		  return currVal;	   
 		}else{	
 		return (((10)*(currVal - range.min))/(range.max - range.min) + calcCounter*3);
 		}
 	  }
 	  
-	  function createAnnotations(dataTable, rowNum){
-		 var halfValue = Math.round(dataTable.getNumberOfRows()/2);
-		 if (rowNum == halfValue)
-		   return "Stress";
-		else
-		  return "";
 
-		
-	  }
-	  
 	  function testHandler(e){
 		$("#testOverlay").css("left", e.pageX + 10);
 		$("#testOverlay").css("top", e.pageY + 84);
@@ -473,15 +495,21 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		else{
 			  $("#testOverlay").show();
 			  var label;
-			  var day = currData.getFormattedValue(ele[0].row, 0);
+			  var day = currData.getValue(ele[0].row, 0);
+			  day = (currentRange == "Day") ? day.toString("htt") : day.toString("MM/dd");
 			  var htmlText = "<span><b>" + day + "</b></span><br/>";
 			  var cols = currView.getViewColumns();
 			  console.log("col: " + cols);
-			  for (i=0; i< cols.length; i++){
+			  for (i=1; i< cols.length; i+=3){
 				label = currData.getColumnLabel(cols[i]);
 				if (label != "text" && label != "certainty" && label !="Date"){
-					value = currData.getValue(ele[0].row, colDir[label]);
-					htmlText += "<span>" + label + " ~ " + value + unitDir[label] + "</span><br/>";
+					if (currData.getValue(ele[0].row, cols[i+2]) != false){
+						console.log("S" + currData.getColumnLabel(colDir[label]));
+						value = currData.getValue(ele[0].row, colDir[label]);
+						htmlText += "<span>" + label + " ~ " + value + unitDir[label] + "</span><br/>";
+					}else{
+						htmlText += "<span>" + label + " ~ " + "No Input</span><br/>";
+					}
 				}
 			}
 			
@@ -538,10 +566,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	<span id="currentRange"></span>
 	<button type="button" id="nextDate" onClick="changeDate(1)">next</button><br/><br/>
 	<form id="formFactor">
-	<input type="checkbox"	id="stressToggle" value="1" disabled="disabled" checked="checked"></input>
-	<input type="checkbox"	value="5" onClick="checkFactors(this)">Heart Rate</input>
-	<input type="checkbox"	id="sleepToggle" value="9" onClick="checkFactors(this)">Sleep</input>
-	<input type="checkbox"	id="tempToggle" value="13" onClick="checkFactors(this)">Temperature</input>
+	<input type="checkbox"	id="stressToggle" value="2" disabled="disabled" checked="checked"></input>
+	<input type="checkbox"	value="6" onClick="checkFactors(this)">Heart Rate</input>
+	<input type="checkbox"	id="sleepToggle" value="10" onClick="checkFactors(this)">Sleep</input>
+	<input type="checkbox"	id="tempToggle" value="14" onClick="checkFactors(this)">Temperature</input>
 	</form><br/>
 	<button type="button" id="highStress" onClick="filterByStress(this)" >High Stress</button>
 	<button type="button" id="lowStress" onClick="filterByStress(this)">Low Stress</button>
