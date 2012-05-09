@@ -122,7 +122,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
         
         console.log(averages);
         dataDaily.addRows([averages]);
-        i+= oneDay.length*3;       
+        i+= oneDay.length;       
       }
          
          dataByHour = data.clone();
@@ -143,7 +143,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					chartArea : {width: 465, height: 245, top: 5, left: 10}, focusTarget : "category", 
                  	hAxis: { format:'MM/dd/yy', viewWindowMode: 'explicit', gridlines: {color: "#dbdad5"}, 
                    	viewWindow: {min: dataView.getValue(0, 0), max: dataView.getValue(data.getNumberOfRows() - 1, 0)}}, //initial date range = all
-               		displayAnnotations: true, tooltip: {trigger: 'none'},
+               		displayAnnotations: true, tooltip: {trigger: 'none'}, curve: "function",
 					backgroundColor: {fill: "white"},
 					vAxis: { gridlines: {count: 0}, viewWindowMode: 'explicit', viewWindow : {min: 0}}
                     }; 
@@ -395,7 +395,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
       
         var text = "<ul>";
         for (var fact in averages){
-          text += "<li><h3>" + fact + ":</h3>" + averages[fact] + "</li>";
+          text += "<li><span>Average" + fact + ":" + averages[fact] + unitDir[fact] + "</span></li>";
 
         }
     
