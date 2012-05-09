@@ -160,6 +160,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		 dataView = new google.visualization.DataView(data);
 		 dataView.setColumns([0,2,3,4]);   
 	  
+		var range = data.getColumnRange(2);
 	  //options for default state of histogram
 		 options = { strictFirstColumnType: true, animation: {duration: 1000, easing: 'in'}, 
 					chartArea : {width: 460, height: 245, top: 5, left: 10}, focusTarget : "category", 
@@ -167,7 +168,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					viewWindow: {min: dataView.getValue(0, 0), max: dataView.getValue(data.getNumberOfRows() - 1, 0)}}, //initial date range = all
 					displayAnnotations: true, tooltip: {trigger: 'none'}, curve: "function",
 					backgroundColor: {fill: "white"},
-					vAxis: { gridlines: {count: 0}, viewWindowMode: 'pretty', viewWindow : {min: 0}},
+					vAxis: { gridlines: {count: 0}, viewWindowMode: 'explicit', viewWindow : {min: range.min - 1, max: range.max + 1}},
 					series: [{color: 'grey'}] }; 
 	  
 	  MAX = options.hAxis.viewWindow.max.clone();	 
@@ -192,6 +193,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	
 		prevButton.disabled = options.hAxis.viewWindow.min <= MIN;
 		nextButton.disabled = options.hAxis.viewWindow.max >= MAX; 
+		options.vAxis.viewWindow.min = currData.getColumnRange(2).min - 1;
 		addAnnotation();
 		
 		switch(currentRange){
@@ -310,8 +312,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		 if (cols[i] == 13) 
 		   document.getElementById('tempToggle').checked = "checked";
 	  }
-
-		
 		currData = data;
 		currView = dataView;
 	  }
@@ -335,8 +335,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		options.hAxis.format = "ha";
 		
 		currData = dataByHour;
-		currView = databyHourView;
-
+		currView = databyHourView;			
 	  }
 	  
 	  
@@ -375,8 +374,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 	  function checkFactors(ele){
 		  $("#testOverlay").hide();
-	
-			if (ele.checked){
+			if (ele.checked){	
 			  dataView.setColumns(dataView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
 			  databyHourView.setColumns(dataView.getViewColumns());
 			}else{
@@ -385,21 +383,23 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			}	 
 
 			
-			options.series = [];
-			var label;
+			options.series = {};
+			var label; var max = 0; 
+			var range;
 			var cols = currView.getViewColumns();
-			console.log("col: " + cols);
 			var counter = 0;
-			  for (i=0; i< cols.length; i++){
-				label = currData.getColumnLabel(cols[i]);
+			  for (i=1; i< cols.length; i+=3){
+				 range = data.getColumnRange(cols[i]);	
+				 max = ((range.max + 1) > max) ? range.max + 1 : max;
+				 label = currData.getColumnLabel(cols[i]);
+				 console.log(label +  colorDir[label]);
 				 options.series[counter] = {};
-				if (label != "text" && label != "certainty" && label !="Date"){
-					 console.log(label + i);
-					 options.series[counter]["color"] = colorDir[label];
-					counter++;
+				 options.series[counter]["color"] = colorDir[label];
+				 counter++;
 				}
-			}
    
+			options.vAxis.viewWindow.max = max;
+
 			console.log(options.series);
 			drawChart();
 	  }
@@ -470,10 +470,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		var currVal = dataTable.getValue(rowNum, calcCounter);
 		if (currVal == null)
 		  return null;
-		if ((range.max <= 10 && range.min >= 0) || (dataTable.getColumnLabel(calcCounter) == "Stress")){ 
-		  return currVal;	   
+		if ((range.max <= 10 && range.min >= 0)){ 
+				return currVal + 8*calcCounter;
 		}else{	
-		return (((10)*(currVal - range.min))/(range.max - range.min) + calcCounter*3);
+		return (((10)*(currVal - range.min))/(range.max - range.min) + 8*calcCounter);
 		}
 	  }
 	  
