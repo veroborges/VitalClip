@@ -43,6 +43,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  /***hard coded column values and units***/
 	  var colDir = {"Stress" : 1, "Heart Rate" : 4, "Sleep" : 8, "Temperature" : 12};
 	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "C"};
+	  var colorDir = {"Stress" : "grey", "Heart Rate" : "#e15b4f", "Sleep" : "#5091b9", "Temperature" : "#86b45c", "Mood" : "#6058ab"};
 	
       
       /***** drawVisualization *****
@@ -141,11 +142,12 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
       //options for default state of histogram
          options = { strictFirstColumnType: true, animation: {duration: 1000, easing: 'in'}, 
 					chartArea : {width: 465, height: 245, top: 5, left: 10}, focusTarget : "category", 
-                 	hAxis: { format:'MM/dd/yy', viewWindowMode: 'explicit', gridlines: {color: "#dbdad5"}, 
+                 	hAxis: { format:'MM/dd/yy', viewWindowMode: 'explicit', gridlines: {color: "#dbdad5", count: 10}, 
                    	viewWindow: {min: dataView.getValue(0, 0), max: dataView.getValue(data.getNumberOfRows() - 1, 0)}}, //initial date range = all
                		displayAnnotations: true, tooltip: {trigger: 'none'}, curve: "function",
 					backgroundColor: {fill: "white"},
-					vAxis: { gridlines: {count: 0}, viewWindowMode: 'explicit', viewWindow : {min: 0}}
+					vAxis: { gridlines: {count: 0}, viewWindowMode: 'pretty', viewWindow : {min: 0}},
+					series: [{color: 'grey'}]
                     }; 
       
       MAX = options.hAxis.viewWindow.max.clone();    
@@ -343,10 +345,25 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
               dataView.hideColumns([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]);
               databyHourView.setColumns(dataView.getViewColumns());
             }    
+
 			
+			options.series = [];
+			var label;
+			var cols = currView.getViewColumns();
+			console.log("col: " + cols);
+			var counter = 0;
+			  for (i=0; i< cols.length; i++){
+				label = currData.getColumnLabel(cols[i]);
+				 options.series[counter] = {};
+				if (label != "text" && label != "certainty" && label !="Date"){
+					 console.log(label + i);
+					 options.series[counter]["color"] = colorDir[label];
+					counter++;
+				}
+			}
    
+			console.log(options.series);
             drawChart();
-			console.log(dataView.getViewColumns());
       }
     
       function filterByStress(ele){
