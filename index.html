@@ -42,7 +42,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	
 	  /***hard coded column values and units***/
 	  var colDir = {"Stress" : 1, "Heart Rate" : 5, "Sleep" : 9, "Temperature" : 13};
-	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "C"};
+	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "F"};
 	  var colorDir = {"Stress" : "grey", "Heart Rate" : "#e15b4f", "Sleep" : "#5091b9", "Temperature" : "#86b45c", "Mood" : "#6058ab"};
 	
 	  
@@ -183,8 +183,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			   $("#visualization").find("iframe").contents().find("body").find('svg').click(testHandler);
 			   selectHandler();
 		});
-
-		  // google.visualization.events.addListener(history, 'select', selectHandler);
 	
 		drawChart();
  }
@@ -299,10 +297,15 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  }
 	  
 	  function removeDayView(){
-		document.getElementById('tempToggle').disabled = false;
-		document.getElementById('sleepToggle').disabled = false;
-		document.getElementById('sleepToggle').checked = false;
-		document.getElementById('tempToggle').checked = false;
+		options.chartArea.height = 245;
+		
+		$('#tempToggle').prop("disabled",false);
+		$('#sleepToggle').prop("disabled",false);
+		$('#tempToggle').prop("checked",false);
+		$('#sleepToggle').prop("checked",false);
+		
+		$('#highStress').prop("disabled",false);
+		$('#lowStress').prop("disabled",false);
 		
 		cols = dataView.getViewColumns();
 		
@@ -317,15 +320,20 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  }
 	  
 	  function setDayView(){
+		options.chartArea.height = 185;
+		
 		//disable and check or simply .hide()?
-		document.getElementById('sleepToggle').checked = true;
-		document.getElementById('sleepToggle').disabled = true;
-		document.getElementById('tempToggle').checked = true;
-		document.getElementById('tempToggle').disabled = true;
+		$('#sleepToggle').prop("checked",true);
+		$('#sleepToggle').prop("disabled",true);
+		$('#tempToggle').prop("checked",true);
+		$('#tempToggle').prop("disabled",true);
+		
+		$('#highStress').prop("disabled",true);
+		$('#lowStress').prop("disabled",true);
 		
 		databyHourView.hideColumns([10,11,13,14,15,16]);
 		day = data.getFilteredRows([{column: 0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
-		console.log("Daaaay");
+		
 		var text = "<ul>";
 		text += "<li><span>Average Sleep: " + data.getValue(day[0], colDir["Sleep"]) + " hours</span></li>";
 		text += "<li><span>Average Temp: " + data.getValue(day[0], colDir["Temperature"]) + unitDir["Temperature"] +"</span></li>";
@@ -345,7 +353,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  changes date range of histogram and date text
 	 *******/
 	 function changeDate(dir){
-	
 		  $("#testOverlay").hide();
 		  $("#testOverlay").html("");
 		var min = options.hAxis.viewWindow.min.clone();
@@ -373,6 +380,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  }
 	  
 	  function checkFactors(ele){
+		  $('#lowStress').prop("checked", false);
+		  $('#highStress').prop("checked", false);
+		  options.chartArea.height = 245;
+		
 		  $("#testOverlay").hide();
 			if (ele.checked){	
 			  dataView.setColumns(dataView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
@@ -406,60 +417,84 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	
 	  function filterByStress(ele){
 		$("#testOverlay").hide();
-		var min;
-		var max;
-		switch(ele.id){
-		  case 'highStress':
-			min = 8;
-			max = 10;
-			break;
-		  case 'lowStress':
-			min = 0;
-			max = 3;
-			break;
-		  default:
-		}
-			
-		var selected= [];
 		
-		//filter by date range being viewed and stress range selected
-		var inRange = currView.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
-												{column: 1, minValue: min, maxValue: max}]);
-		for(i=0; i<inRange.length; i++){
-		  selected.push({row: inRange[i], column:1});
-		}
-		
-		history.setSelection(selected);
-		  
-		var averages = {};
-		var label;
-		for (col = 5; col < currData.getNumberOfColumns(); col += 4){
-		  label = currData.getColumnLabel(col);
-		  averages[label] = 0;
-		  counter = 0;
-		  for (j = 0; j < selected.length; j++){
-			curr = currData.getValue(selected[j].row, col);
-			if (curr != null){
-			  averages[label] += curr;
-			  counter++;
+		if (ele.checked){
+			var min;
+			var max;
+			var changeWidth = true;
+			switch(ele.id){
+		  		case 'highStress':
+					min = 8;
+					max = 10;
+					if ($('#lowStress').prop("checked") == true){
+						$('#lowStress').prop("checked", false);
+						changeWidth = false;
+					}
+					break;
+		  		case 'lowStress':
+					min = 0;
+					max = 3;
+					if ($('#highStress').prop("checked") == true){
+						$('#highStress').prop("checked", false);
+						changeWidth = false;
+					}
+					break;
+		  		default:
 			}
-		  }
+				
+			var selected= [];
+		
+			//filter by date range being viewed and stress range selected
+			var inRange = data.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
+													{column: 1, minValue: min, maxValue: max}]);
+			for(i=0; i<inRange.length; i++){
+			  selected.push({row: inRange[i], col: null});
+			}
+	    
+		    inRange = dataByHour.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
+														{column: 1, minValue: min, maxValue: max}]);
+			var averages = {};
+			var label;
+			var cols = dataView.getViewColumns();
+			for (col = 4; col < cols.length; col += 3){
+			  label = data.getColumnLabel(cols[col]);
+			  averages[label] = 0;
+			  counter = 0;
+			  for (j = 0; j < inRange.length; j++){
+				curr = dataByHour.getValue(inRange[j], colDir[label]);
+				if (curr != null){
+				  averages[label] += curr;
+				  counter++;
+				}
+			  }
 		  
-		  averages[label] = averages[label]/counter;
-		}
+			  averages[label] = Math.round(10*averages[label]/counter)/10;
+			}
+		
+			if (changeWidth){
+				options.chartArea.height -= 60;
+				drawChart();
+			}
+		
+			history.setSelection(selected);
 	  
-		var text = "<ul>";
-		for (var fact in averages){
-		  text += "<li><span>Average" + fact + ":" + averages[fact] + unitDir[fact] + "</span></li>";
+			var text = "<ul>";
+			for (var fact in averages){
+			  text += "<li><span>Average" + fact + ":" + averages[fact] + unitDir[fact] + "</span></li>";
 
-		}
+			}
 	
-		text += "</ul>";
-		extraText.innerHTML = text;
+			text += "</ul>";
+			extraText.innerHTML = text;
 
 		
-		console.log(averages);
-		  //drawChart();
+			console.log(averages);
+			}else{
+				options.chartArea.height += 60;
+				drawChart();
+				extraText.innerHTML = "";
+				
+			}			
 	  }
 	  
 	 
@@ -479,6 +514,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 
 	  function testHandler(e){
+		$("#testOverlay").unbind("click");
+		$("#testOverlay").hide();
+		$("#testOverlay").html("");
+		
 		$("#testOverlay").css("left", e.pageX + 10);
 		$("#testOverlay").css("top", e.pageY + 84);
 	}
@@ -493,18 +532,19 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		  $("#testOverlay").html("");
 		}		
 		else{
-			  $("#testOverlay").show();
 			  var label;
 			  var day = currData.getValue(ele[0].row, 0);
 			  day = (currentRange == "Day") ? day.toString("htt") : day.toString("MM/dd");
 			  var htmlText = "<span><b>" + day + "</b></span><br/>";
 			  var cols = currView.getViewColumns();
 			  console.log("col: " + cols);
+			
+			  var isInput = false;
 			  for (i=1; i< cols.length; i+=3){
 				label = currData.getColumnLabel(cols[i]);
 				if (label != "text" && label != "certainty" && label !="Date"){
 					if (currData.getValue(ele[0].row, cols[i+2]) != false){
-						console.log("S" + currData.getColumnLabel(colDir[label]));
+						isInput = true;
 						value = currData.getValue(ele[0].row, colDir[label]);
 						htmlText += "<span>" + label + " ~ " + value + unitDir[label] + "</span><br/>";
 					}else{
@@ -512,11 +552,17 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					}
 				}
 			}
-			
-			   $("#testOverlay").html(htmlText);
-			  $("#testOverlay").click(function(e){
-				selectPopUpHandler(e, currData.getValue(ele[0].row, 0));
-			});
+				
+				if (isInput == true){
+					$("#testOverlay").show();
+					 $("#testOverlay").html(htmlText);
+					  $("#testOverlay").click(function(e){
+						selectPopUpHandler(e, currData.getValue(ele[0].row, 0));
+					});
+				}// else{
+				// 					history.setSelection([]);
+				// 				}
+			  
 		}
 		}
 
@@ -538,6 +584,11 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  button:disabled{
 		display: none;
 	  }
+	   
+	  .stressTog:disabled, .stressTog{
+			display: inline;
+	  
+}
 	  
 	  input[type="radio"]{
 		display: inline; 
@@ -552,6 +603,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			color: white;
 			font-size: 12px;
 	}
+	
+	
 </style>
 
   </head>
@@ -571,8 +624,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	<input type="checkbox"	id="sleepToggle" value="10" onClick="checkFactors(this)">Sleep</input>
 	<input type="checkbox"	id="tempToggle" value="14" onClick="checkFactors(this)">Temperature</input>
 	</form><br/>
-	<button type="button" id="highStress" onClick="filterByStress(this)" >High Stress</button>
-	<button type="button" id="lowStress" onClick="filterByStress(this)">Low Stress</button>
+	<input type="checkbox" id="highStress" class= "stressTog" onClick="filterByStress(this)" >High Stress	</input>
+	<input type="checkbox"id="lowStress" class= "stressTog" onClick="filterByStress(this)">Low Stress	</input>
 	<div id="visualization" style="width: 480px; height: 320px; "></div>
 	<div id="testOverlay"></div>
 	<div id="extraText"></div>
