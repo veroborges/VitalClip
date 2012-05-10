@@ -42,9 +42,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  var initData;
 	
 	  /***hard coded column values and units***/
-	  var colDir = {"Stress" : 1, "Heart Rate" : 5, "Sleep" : 9, "Temperature" : 13};
-	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "F"};
-	  var colorDir = {"Stress" : "grey", "Heart Rate" : "#e15b4f", "Sleep" : "#5091b9", "Temperature" : "#86b45c", "Mood" : "#6058ab"};
+	  var colDir = {"Stress" : 1, "Heart Rate" : 5, "Sleep" : 9, "Temperature" : 13, "Activity" : 17, "Mood" : 21};
+	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "F", "Activity" : "", "Mood" : ""};
+	  var colorDir = {"Stress" : "grey", "Heart Rate" : "#e15b4f", "Sleep" : "#5091b9",
+	 	"Temperature" : "#cfcb4e", "Activity" : "#86bf58", "Mood" : "#6058ab"};
 	
 	  
 	  /***** drawVisualization *****
@@ -62,7 +63,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		var query = new google.visualization.Query(queryURL);
 	   
 		// Apply query language.
-		query.setQuery("Select A, B, C, D, E Order BY A");
+		query.setQuery("Select A, B, C, D, E, F, G Order BY A");
 	  
 		// Send the query with a callback function.
 		query.send(handleQueryResponse);
@@ -305,6 +306,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		$('#sleepToggle').prop("disabled",false);
 		$('#tempToggle').prop("checked",false);
 		$('#sleepToggle').prop("checked",false);
+		$('#activityToggle').prop("checked",false);
+		$('#activityToggle').prop("disabled",false);
 		
 		$('#highStress').prop("disabled",false);
 		$('#lowStress').prop("disabled",false);
@@ -329,16 +332,19 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		$('#sleepToggle').prop("disabled",true);
 		$('#tempToggle').prop("checked",true);
 		$('#tempToggle').prop("disabled",true);
+		$('#activityToggle').prop("checked",true);
+		$('#activityToggle').prop("disabled",true);
 		
 		$('#highStress').prop("disabled",true);
 		$('#lowStress').prop("disabled",true);
 		
-		databyHourView.hideColumns([10,11,13,14,15,16]);
+		databyHourView.hideColumns([10,11,12,14,15,16,18,19,20]);
 		day = data.getFilteredRows([{column: 0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
 		
 		var text = "<ul>";
 		text += "<li><span>Average Sleep: " + data.getValue(day[0], colDir["Sleep"]) + " hours</span></li>";
 		text += "<li><span>Average Temp: " + data.getValue(day[0], colDir["Temperature"]) + unitDir["Temperature"] +"</span></li>";
+		text += "<li><span>Average Activity: " + data.getValue(day[0], colDir["Activity"]) + unitDir["Activity"] +"</span></li>";
 		text += "</ul>";
 		
 		extraText.innerHTML = text;
@@ -647,6 +653,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	<input type="checkbox"	value="6" onClick="checkFactors(this)">Heart Rate</input>
 	<input type="checkbox"	id="sleepToggle" value="10" onClick="checkFactors(this)">Sleep</input>
 	<input type="checkbox"	id="tempToggle" value="14" onClick="checkFactors(this)">Temperature</input>
+	<input type="checkbox"	id="activityToggle" value="18" onClick="checkFactors(this)">Activity</input>
+	<input type="checkbox"	id="moodToggle" value="22" onClick="checkFactors(this)">Mood</input>
 	</form><br/>
 	<input type="checkbox" id="highStress" class= "stressTog" onClick="filterByStress(this)" >High Stress	</input>
 	<input type="checkbox"id="lowStress" class= "stressTog" onClick="filterByStress(this)">Low Stress	</input>
