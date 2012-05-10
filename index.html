@@ -8,7 +8,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
   <head>
 	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
 	<title>
-	  VitalCLip History Visualization
+	  VitalClip History Visualization
 	</title>
 	<script type="text/javascript" src="http://www.google.com/jsapi"></script>
 	<script type="text/javascript" src="http://datejs.googlecode.com/svn/trunk/build/date-en-US.js"></script>
@@ -39,6 +39,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  var extraText;
 	  var currData;
 	  var currView;
+	  var initData;
 	
 	  /***hard coded column values and units***/
 	  var colDir = {"Stress" : 1, "Heart Rate" : 5, "Sleep" : 9, "Temperature" : 13};
@@ -79,7 +80,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  }
 	
 
-	  var initData = response.getDataTable();  
+	  initData = response.getDataTable();  
 	  dataView = new google.visualization.DataView(initData);
 	  dataView.setColumns([0]);
 	  
@@ -579,6 +580,30 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	   }
 	  
 	google.setOnLoadCallback(drawVisualization);
+	
+	
+	
+	
+	/********* TAKE READING BUTTON EVENT ************/
+	function takeReading(){
+		var rows = data.getNumberOfRows() - 1;
+		var txt = " ";
+		var rand; var label;
+		var newRow = [];
+			
+		console.log(initData.getNumberOfColumns());
+		for (i = 1; i< initData.getNumberOfColumns(); i++){
+			rand = Math.floor((Math.random()*rows));
+			console.log("row" + rand);
+			label = initData.getColumnLabel(i);
+			txt += "<span>" + label + ": " + Math.round(data.getValue(rand, colDir[label])) + "</span><br />";
+			newRow[i] = rand;
+		}
+		
+		console.log(txt);
+		$('#readFeedback').html(txt);
+	}
+	
 	</script>
 	<style> 
 	  button:disabled{
@@ -627,8 +652,12 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	<input type="checkbox" id="highStress" class= "stressTog" onClick="filterByStress(this)" >High Stress	</input>
 	<input type="checkbox"id="lowStress" class= "stressTog" onClick="filterByStress(this)">Low Stress	</input>
 	<div id="visualization" style="width: 480px; height: 320px; "></div>
-	<div id="testOverlay"></div>
+	<div id="testOverlay" style="display: none"></div>
 	<div id="extraText"></div>
+	
+	<button id="readingButt" onClick="takeReading()">Take Reading</button>
+	<div id="readFeedback"></div>
+	
 
   </body>
 </html>
