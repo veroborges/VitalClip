@@ -183,6 +183,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		google.visualization.events.addListener(history, 'select', function () {
 			   $("#visualization").find("iframe").contents().find("body").find('svg').click(testHandler);
 			   selectHandler();
+			
 		});
 	
 		drawChart();
@@ -494,7 +495,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 				options.chartArea.height += 60;
 				drawChart();
 				extraText.innerHTML = "";
-				
 			}			
 	  }
 	  
@@ -515,23 +515,21 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 
 	  function testHandler(e){
-		$("#testOverlay").unbind("click");
-		$("#testOverlay").hide();
-		$("#testOverlay").html("");
-		
-		$("#testOverlay").css("left", e.pageX + 10);
-		$("#testOverlay").css("top", e.pageY + 84);
+			$("#testOverlay").css("left", e.pageX + 10);
+			$("#testOverlay").css("top", e.pageY + 84);
+			$("#testOverlay").show();
+
 	}
 	
 	  function selectHandler(e){	 
 		var ele = history.getSelection();
 		console.log("SAS:" + ele.length);
 		if (ele.length == 0){
-		  console.log("Deeeselected");
 		  $("#testOverlay").unbind("click");
 		  $("#testOverlay").hide();
 		  $("#testOverlay").html("");
-		}		
+		}	
+			
 		else{
 			  var label;
 			  var day = currData.getValue(ele[0].row, 0);
@@ -553,17 +551,17 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					}
 				}
 			}
-				
-				if (isInput == true){
-					$("#testOverlay").show();
-					 $("#testOverlay").html(htmlText);
-					  $("#testOverlay").click(function(e){
-						selectPopUpHandler(e, currData.getValue(ele[0].row, 0));
-					});
-				}// else{
-				// 					history.setSelection([]);
-				// 				}
-			  
+		    
+		    if (isInput == true){
+				$("#testOverlay").html(htmlText);
+			  	$("#testOverlay").click(function(e){
+				selectPopUpHandler(e, currData.getValue(ele[0].row, 0));
+				});	
+			}else{
+			  $("#testOverlay").unbind("click");
+			  $("#testOverlay").hide();
+			  $("#testOverlay").html("");
+			}
 		}
 		}
 
@@ -574,6 +572,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			default:
 				options.hAxis.viewWindow.max = date.clone();
 				$('#DayRad').prop('checked', true);
+				$("#testOverlay").html("");
 				$("#testOverlay").unbind("click");
 				changeRange("Day");
 		}
