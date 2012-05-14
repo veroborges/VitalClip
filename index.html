@@ -40,6 +40,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  var currData;
 	  var currView;
 	  var initData;
+	  var stressAve = 0;
+	  var stressAveScaled = 0;
 	
 	  /***hard coded column values and units***/
 	  var colDir = {"Stress" : 1, "Heart Rate" : 5, "Sleep" : 9, "Temperature" : 13, "Activity" : 17, "Mood" : 21};
@@ -186,7 +188,23 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			   selectHandler();
 			
 		});
-	
+		
+		var curr;
+		var counter = 0;
+		for(i=0; i < dataByHour.getNumberOfRows(); i++){
+			curr = dataByHour.getValue(i, 1);
+			if (curr != null){
+				stressAve += curr;
+				counter++;
+				curr = dataByHour.getValue(i, 2);
+				stressAveScaled += curr;
+			}
+		}
+		
+		stressAve = Math.round(stressAve/counter);
+		stressAveScaled = Math.round(stressAveScaled/counter);
+		
+		
 		drawChart();
  }
 
@@ -294,7 +312,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		  removeDayView();
 		}
 		
-		extraText.innerHTML = "";
 		options.chartArea.height = 245;
 		currentRange = range;
 		drawChart();
@@ -304,7 +321,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			filterByStress($('#highStress').get(0));
 		}else if ($('#lowStress').prop("checked")){
 			filterByStress($('#lowStress').get(0));
-				  	}
+		}
 	
 	}
 	  
@@ -331,10 +348,15 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  }
 		currData = data;
 		currView = dataView;
+		extraText.innerHTML = "";
 	  }
 	  
 	  function setDayView(){
 		options.chartArea.height = 185;
+
+		options.vAxis.baseline = null;	
+		options.vAxis.baselineColor = "black";
+		
 		
 		//disable and check or simply .hide()?
 		$('#sleepToggle').prop("checked",true);
@@ -346,6 +368,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		
 		$('#highStress').prop("disabled",true);
 		$('#lowStress').prop("disabled",true);
+		$('#highStress').prop("checked",false);
+		$('#lowStress').prop("checked",false);
 		
 		databyHourView.hideColumns([10,11,12,14,15,16,18,19,20]);
 		day = data.getFilteredRows([{column: 0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
@@ -356,6 +380,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		text += "<li><span>Average Activity: " + data.getValue(day[0], colDir["Activity"]) + unitDir["Activity"] +"</span></li>";
 		text += "</ul>";
 		
+		extraText.innerHTML = "";
 		extraText.innerHTML = text;
 		options.hAxis.format = "ha";
 		currData = dataByHour;
@@ -405,7 +430,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 	  function checkFactors(ele){
 		  options.chartArea.height = 245;
-		
 		  $("#testOverlay").hide();
 			if (ele.checked){	
 			  dataView.setColumns(dataView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
@@ -414,7 +438,11 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			  dataView.hideColumns([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]);
 			  databyHourView.setColumns(dataView.getViewColumns());
 			}	 
-
+			
+			var filtered = false;
+			if ($('#highStress').prop("checked") || $('#lowStress').prop("checked")){
+				filtered = true;
+			}
 			
 			options.series = {};
 			var label; var max = 0; 
@@ -422,8 +450,9 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			var cols = currView.getViewColumns();
 			var counter = 0;
 			  for (i=1; i< cols.length; i+=3){
-				 range = data.getColumnRange(cols[i]);	
-				 max = ((range.max + 1) > max) ? range.max + 1 : max;
+				 range = data.getColumnRange(cols[i]);
+				 if (filtered == false || i == 1)	
+				 	max = ((range.max + 1) > max) ? range.max + 1 : max;
 				 label = currData.getColumnLabel(cols[i]);
 				 console.log(label +  colorDir[label]);
 				 options.series[counter] = {};
@@ -443,7 +472,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			}
 	  }
 	
-	  function filterByStress(ele){
+	function filterByStress(ele){
+		extraText.innerHTML = "";
 		console.log("eleeee" + ele.id);
 		$("#testOverlay").hide();		
 		if (ele.checked){
@@ -451,13 +481,13 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			var max;
 			switch(ele.id){
 		  		case 'highStress':
-					min = 8;
+					min = stressAve + 1;
 					max = 10;
 					$("#lowStress").prop("checked", false);
 					break;
 		  		case 'lowStress':
 					min = 0;
-					max = 3;
+					max = stressAve - 1;
 					$("#highStress").prop("checked", false);	
 					break;
 		  		default:
@@ -465,15 +495,21 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 				
 	    
 		    var highRange = dataByHour.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
-														{column: 1, minValue: 8, maxValue: 10}]);
+														{column: 1, minValue: stressAve + 1, maxValue: 10}]);
 		
 		    var lowRange = dataByHour.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
-												{column: 1, minValue: 0, maxValue: 3}]);												
+												{column: 1, minValue: 0, maxValue: stressAve - 1}]);												
 			var highAverages = {};
 			var lowAverages = {};
 			var label;
-			var cols = dataView.getViewColumns();
-			for (col = 4; col < cols.length; col += 3){				
+			var cols = [];
+		    $('#formFactor input[type=checkbox]').each(function () {
+				 if (this.checked && $(this).val() != 2) {
+				         cols.push(Number($(this).val()));
+				}
+		    });
+						
+			for (col = 0; col < cols.length; col++){				
 			  label = data.getColumnLabel(cols[col]);
 			  highAverages[label] = 0;
 			  lowAverages[label] = 0;
@@ -500,12 +536,18 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			
 			}
 		
-			if ((options.chartArea.height != 185) && cols.length > 4){
+			if ((options.chartArea.height != 185) && cols.length > 0){
 				options.chartArea.height -= 60;
+				options.vAxis.viewWindow.max = data.getColumnRange(2) + 1;
+				dataView.setColumns([0,2,3,4]);	
+				options.vAxis.baseline = stressAveScaled;	
+				options.vAxis.baselineColor = "green";
+				drawChart();
+									
 			}
 			
-			drawChart();				
 			
+		
 			var selected= [];
 		
 			//filter by date range being viewed and stress range selected
@@ -520,29 +562,40 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			
 			history.setSelection(selected);
 		
-	  		if (cols.length > 4){
+	  		if (cols.length > 0){
 				var text = "<ul>";
 				for (var fact in highAverages){
 					if (ele.id == "highStress"){
 			  			text += "<li><span class='currRan'>Average " + fact + ":" + highAverages[fact] + unitDir[fact] +
-			 					" when you have high Stress</span><br/>";
+			 					" when your stress is higher than average</span><br/>";
 						text += "<span class='otherRan'>Average " + fact + ":" + lowAverages[fact] + unitDir[fact] +
-						 		" when low stress</span></li>";
+						 		" when your stress is lower than average</span></li>";
 					}else{
 				  		text += "<li><span class='currRan'>Average " + fact + ":" + lowAverages[fact] + unitDir[fact] + 
-								" when you have low stress</span><br/>";
+								" when your stress is lower than average</span><br/>";
 						text += "<span class='otherRan'>Average " + fact + ":" + highAverages[fact] + unitDir[fact] + 
-								" when high stress</span></li>";
+								"when your stress is higher than average</span></li>";
 					}
 					extraText.innerHTML = text;
 				}
 				text += "</ul>";
 			}
-			
 			}else{
-				options.chartArea.height = 245;
-				drawChart();
-				extraText.innerHTML = "";
+				if (options.chartArea.height != 245){
+					options.chartArea.height = 245;
+					$('#formFactor input[type=checkbox]').each(function () {
+					           if (this.checked && $(this).val() != 2) {
+					               checkFactors($(this).get(0));
+								}
+					});
+					options.vAxis.baseline = null;	
+					options.vAxis.baselineColor = "black";	
+					
+					drawChart();
+				}else{
+					extraText.innerHTML = "";
+			    	history.setSelection();
+				}
 			}			
 	  }
 	  
@@ -670,16 +723,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		display: inline; 
 	  }
 	  
-/*		#testOverlay{
-			-moz-border-radius: 5px;
-			border-radius: 5px;
-			position: absolute;
-			background-color: rgba(109,109,109,0.9);
-			padding: 5px;
-			color: white;
-			font-size: 12px;
-	}
-	*/
 	#testOverlay
 	{
 	  font-size: 12px;
