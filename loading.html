@@ -1,0 +1,131 @@
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>loading</title>
+	<meta name="generator" content="TextMate http://macromates.com/">
+	<meta name="author" content="Vero Borges">
+	<!-- Date: 2012-05-13 -->
+ 	<style type="text/css">
+	#canvas {
+	}
+	h1{
+		color: black;
+	}
+	</style>
+</head>
+<script type="text/javascript">
+var counter = 0;
+var secs = 30;
+var col1 = "#e7e6e7";
+var col2 = "#cfcfcf";
+
+window.requestAnimFrame = (function(callback){
+    return window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame ||
+    window.oRequestAnimationFrame ||
+    window.msRequestAnimationFrame ||
+    function(callback){
+        window.setTimeout(callback, (1000));
+    };
+})();
+ 
+function animate(lastTime, myRectangle){
+    var canvas = document.getElementById("canvas");
+	var countdown = document.getElementById("countdown");
+    var context = canvas.getContext("2d");
+	
+    // update
+    var date = new Date();
+    var time = date.getTime();
+    var timeDiff = time - lastTime;
+    var linearSpeed = 63.8; // pixels / second done by doing width/total secs per bar
+    var linearDistEachFrame = linearSpeed * timeDiff / (1000);
+    var currentY = myRectangle.y;
+ 	var currentH =  myRectangle.height;
+    if (currentY > 0) {
+        var newY = currentY - linearDistEachFrame;
+		var newH = currentH + linearDistEachFrame;
+        myRectangle.y = newY;
+		myRectangle.height = newH;
+    }
+
+    lastTime = time;
+ 
+    // clear
+    //context.clearRect(0, 0, canvas.width, canvas.height);
+ 
+    // draw
+    context.beginPath();
+    context.rect(myRectangle.x, myRectangle.y, myRectangle.width, myRectangle.height);
+ 
+ 	// createLinearGradient - paints along a line from (x0, y0) to (x1, y1)
+    // since y values (2nd, 4th para) are both 0, gradient shade from left to right
+    var gradient = context.createLinearGradient(0, 0, myRectangle.width, 0); // initialize gradient object [x0, y0, x1, y1]
+    gradient.addColorStop(0, col1);
+    gradient.addColorStop(1, col2);
+    context.fillStyle = gradient;
+    context.fill();
+	context.lineWidth=1;                                     //This sets the width of the border
+	context.strokeStyle= "#bdbdbd";      //This sets the color of the border
+	context.stroke();
+
+ 
+	if (counter == 60){
+		secs--;
+		counter = 1;
+		countdown.innerHTML = secs + "secs remaining";
+	}else{
+		counter++;
+	}
+	
+	if(myRectangle.y < 0){
+		switched = false;
+	}
+	
+	if ((secs > 0 && secs % 5 != 0) || secs == 30){
+		// request new frame
+	    requestAnimFrame(function(){
+	        animate(lastTime, myRectangle);
+	    });
+	}else if (secs > 0 && secs % 5 == 0){
+		// request new frame
+		if (switched == false){
+			col1 = "#f7f7f7";
+			col2 = "#ececec";
+			console.log(myRectangle.y);
+			requestAnimFrame(function(){
+	        animate(lastTime,  {x: myRectangle.x+ 62, y: 319, width: 62, height: 1})
+	    	});
+			switched = true;
+		}else{
+			requestAnimFrame(function(){
+	        animate(lastTime,  myRectangle);
+	    	});
+		}
+	}
+}
+
+var switched = false;
+window.onload = function(){
+    var myRectangle = {
+        x: 0,
+        y: 319,
+        width: 62,
+        height: 1,
+    };
+    var date = new Date();
+    var time = date.getTime();
+    animate(time, myRectangle);
+
+};	
+
+
+</script>
+<body>
+	<h1>Canvas</h1>
+	<span id="countdown">30 Secs Remaining</span><br/>
+	<canvas id="canvas" width= "372px;" height="320px">
+	</canvas>	
+</body>
+</html>
