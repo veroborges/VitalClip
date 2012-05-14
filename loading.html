@@ -11,6 +11,13 @@
 	h1{
 		color: black;
 	}
+	
+	#screen{
+		 width:  480px; 
+		 height: 320px;
+		 margin-left: 20px;
+		 border: 1px black solid;
+	}
 	</style>
 </head>
 <script type="text/javascript">
@@ -119,13 +126,13 @@ window.onload = function(){
     animate(time, myRectangle);
 
 };	
-
-
 </script>
 <body>
 	<h1>Canvas</h1>
+	<div id="screen">
+	<canvas id="canvas" width= "372px" height="320px">
 	<span id="countdown">30 Secs Remaining</span><br/>
-	<canvas id="canvas" width= "372px;" height="320px">
-	</canvas>	
+	</canvas>
+	</div>	
 </body>
 </html>

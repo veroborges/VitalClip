@@ -280,7 +280,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  *******/	   
 	  function changeRange(range){	 
 		$("#testOverlay").hide();
-		$("#testOverlay").html("");		
+		$("#contentPopUp").html("");		
 		var min = options.hAxis.viewWindow.max.clone();
 		var max = options.hAxis.viewWindow.max.clone();
 
@@ -395,7 +395,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	 *******/
 	 function changeDate(dir){
 		  $("#testOverlay").hide();
-		  $("#testOverlay").html("");
+		  $("#contentPopUp").html("");
 		var min = options.hAxis.viewWindow.min.clone();
 		var max = options.hAxis.viewWindow.max.clone();
 
@@ -616,8 +616,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 
 	  function testHandler(e){
-			$("#testOverlay").css("left", e.pageX + 20);
-			$("#testOverlay").css("top", e.pageY + 75);
+			$("#testOverlay").css("left", e.pageX - 51);
+			$("#testOverlay").css("top", e.pageY + 51);
 			$("#testOverlay").show();
 
 	}
@@ -628,7 +628,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		if (ele.length == 0){
 		  $("#testOverlay").unbind("click");
 		  $("#testOverlay").hide();
-		  $("#testOverlay").html("");
+		  $("#contentPopUp").html("");
 		}	
 			
 		else{
@@ -654,14 +654,14 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			}
 		    
 		    if (isInput == true){
-				$("#testOverlay").html(htmlText);
+				$("#contentPopUp").html(htmlText);
 			  	$("#testOverlay").click(function(e){
 				selectPopUpHandler(e, currData.getValue(ele[0].row, 0));
 				});	
 			}else{
 			  $("#testOverlay").unbind("click");
 			  $("#testOverlay").hide();
-			  $("#testOverlay").html("");
+			  $("#contentPopUp").html("");
 			}
 		}
 		}
@@ -673,7 +673,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			default:
 				options.hAxis.viewWindow.max = date.clone();
 				$('#DayRad').prop('checked', true);
-				$("#testOverlay").html("");
+				$("#contentPopUp").html("");
 				$("#testOverlay").unbind("click");
 				changeRange("Day");
 		}
@@ -727,26 +727,33 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	{
 	  font-size: 12px;
 	  position: absolute;
-	  z-index: 999;
-	  padding: 5px;
-	  border: 2px solid #ccc;
-	  opacity: .9;
-	  background-color: #ddd;
-	  background-image: -webkit-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
-	  background-image: -moz-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
-	  background-image: -ms-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
-	  background-image: -o-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
-	  background-image: linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
-	  -moz-border-radius: 4px;
-	  border-radius: 4px;
-	  -moz-box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.5) inset;
-	  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.5) inset;
-	  box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.5) inset;
-	  text-shadow: 0 1px 0 rgba(255,255,255,.4);
-	
-	  border-top-color: #ccc;
 	}
 	
+	#contentPopUp{
+		background: #eeeee7; /* Old browsers */
+		background: -moz-linear-gradient(top,  #eeeee7 1%, #e4e2dd 100%); /* FF3.6+ */
+		background: -webkit-gradient(linear, left top, left bottom, color-stop(1%,#eeeee7), color-stop(100%,#e4e2dd)); /* Chrome,Safari4+ */
+		background: -webkit-linear-gradient(top,  #eeeee7 1%,#e4e2dd 100%); /* Chrome10+,Safari5.1+ */
+		background: -o-linear-gradient(top,  #eeeee7 1%,#e4e2dd 100%); /* Opera 11.10+ */
+		background: -ms-linear-gradient(top,  #eeeee7 1%,#e4e2dd 100%); /* IE10+ */
+		background: linear-gradient(top,  #eeeee7 1%,#e4e2dd 100%); /* W3C */
+
+		border-right:1px solid rgb(189,189,185);
+		border-left:1px solid rgb(189,189,185);
+		margin-top: -3px;
+		width: 97%;
+		margin-left: 1px;
+	}
+	
+	#contentPopUp span{
+		margin-left: 4px;
+	}
+	
+	#topPopUp{
+	}
+	
+	#botPopUp{
+	}
 </style>
 
   </head>
@@ -771,7 +778,11 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	<input type="checkbox" id="highStress" class= "stressTog" onClick="filterByStress(this)" >High Stress	</input>
 	<input type="checkbox"id="lowStress" class= "stressTog" onClick="filterByStress(this)">Low Stress	</input>
 	<div id="visualization" style="width: 480px; height: 320px; "></div>
-	<div id="testOverlay" style="display: none"><div></div></div>
+	<div id="testOverlay" style="display: none">
+		<img id="topPopUp" src="img/popup_box_slice_01.png"/>	
+		<div id="contentPopUp"></div>
+		<img id="botPopUp" src="img/popup_box_slice_03.png"/>	
+	</div>
 	<div id="extraText"></div>
 	
 	<button id="readingButt" onClick="takeReading()">Take Reading</button>
