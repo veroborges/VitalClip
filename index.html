@@ -171,7 +171,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					displayAnnotations: true, tooltip: {trigger: 'none'}, curve: "function",
 					backgroundColor: {fill: "white"},
 					vAxis: { gridlines: {count: 0}, viewWindowMode: 'explicit', viewWindow : {min: range.min - 1, max: range.max + 1}},
-					series: [{color: 'grey'}] }; 
+					series: [{color: 'grey'}], pointSize: 8, lineWidth: 3}; 
 	  
 	  MAX = options.hAxis.viewWindow.max.clone();	 
 	  MIN = options.hAxis.viewWindow.min.clone();	  
@@ -207,7 +207,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat) + " - " + options.hAxis.viewWindow.max.toString(timeFormat);
 		}
 
-
 	  }
 	  
 	  function addAnnotation(){	 
@@ -222,7 +221,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 				currData.setValue(annot[0], i + 1, "");  
 			}
 			  console.log(currData.getColumnLabel(i+1));
-			  currData.setValue(halfValue, i + 1, column);  
+			  currData.setValue(halfValue - 1, i + 1, column);  
 			  i += 4;
 		  }
 	  }
@@ -295,9 +294,19 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		  removeDayView();
 		}
 		
+		extraText.innerHTML = "";
+		options.chartArea.height = 245;
 		currentRange = range;
 		drawChart();
-	  }
+		
+		if ($('#highStress').prop("checked")){
+			console.log("heeere");
+			filterByStress($('#highStress').get(0));
+		}else if ($('#lowStress').prop("checked")){
+			filterByStress($('#lowStress').get(0));
+				  	}
+	
+	}
 	  
 	  function removeDayView(){
 		options.chartArea.height = 245;
@@ -349,7 +358,6 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		
 		extraText.innerHTML = text;
 		options.hAxis.format = "ha";
-		
 		currData = dataByHour;
 		currView = databyHourView;			
 	  }
@@ -384,12 +392,18 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	   
 		options.hAxis.viewWindow.min = min; 
 		options.hAxis.viewWindow.max = max; 
+		extraText.innerHTML = "";
+		options.chartArea.height = 245;
 		drawChart();
+		
+		if ($('#highStress').prop("checked")){
+			filterByStress($('#highStress').get(0));
+		}else if ($('#lowStress').prop("checked")){
+			filterByStress($('#lowStress').get(0));
+		}
 	  }
 	  
 	  function checkFactors(ele){
-		  $('#lowStress').prop("checked", false);
-		  $('#highStress').prop("checked", false);
 		  options.chartArea.height = 245;
 		
 		  $("#testOverlay").hide();
@@ -421,84 +435,111 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 
 			console.log(options.series);
 			drawChart();
+			
+			if ($('#highStress').prop("checked")){
+				filterByStress($('#highStress').get(0));
+			}else if ($('#lowStress').prop("checked")){
+				filterByStress($('#lowStress').get(0));
+			}
 	  }
 	
 	  function filterByStress(ele){
-		$("#testOverlay").hide();
-		
+		console.log("eleeee" + ele.id);
+		$("#testOverlay").hide();		
 		if (ele.checked){
 			var min;
 			var max;
-			var changeWidth = true;
 			switch(ele.id){
 		  		case 'highStress':
 					min = 8;
 					max = 10;
-					if ($('#lowStress').prop("checked") == true){
-						$('#lowStress').prop("checked", false);
-						changeWidth = false;
-					}
+					$("#lowStress").prop("checked", false);
 					break;
 		  		case 'lowStress':
 					min = 0;
 					max = 3;
-					if ($('#highStress').prop("checked") == true){
-						$('#highStress').prop("checked", false);
-						changeWidth = false;
-					}
+					$("#highStress").prop("checked", false);	
 					break;
 		  		default:
 			}
 				
+	    
+		    var highRange = dataByHour.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
+														{column: 1, minValue: 8, maxValue: 10}]);
+		
+		    var lowRange = dataByHour.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
+												{column: 1, minValue: 0, maxValue: 3}]);												
+			var highAverages = {};
+			var lowAverages = {};
+			var label;
+			var cols = dataView.getViewColumns();
+			for (col = 4; col < cols.length; col += 3){				
+			  label = data.getColumnLabel(cols[col]);
+			  highAverages[label] = 0;
+			  lowAverages[label] = 0;
+			  lowCounter = 0;
+			  highCounter = 0;
+			  for (j = 0; j < highRange.length; j++){
+				curr = dataByHour.getValue(highRange[j], colDir[label]);
+				if (curr != null){
+				  highAverages[label] += curr;
+				  highCounter++;
+				}
+			  }
+			
+			  for (j = 0; j < lowRange.length; j++){
+				curr = dataByHour.getValue(lowRange[j], colDir[label]);
+				if (curr != null){
+				  lowAverages[label] += curr;
+				  lowCounter++;
+				}
+			  }
+		  
+			  lowAverages[label] = Math.round(10*lowAverages[label]/lowCounter)/10;
+			  highAverages[label] = Math.round(10*highAverages[label]/highCounter)/10;
+			
+			}
+		
+			if ((options.chartArea.height != 185) && cols.length > 4){
+				options.chartArea.height -= 60;
+				drawChart();				
+			}
+			
 			var selected= [];
 		
 			//filter by date range being viewed and stress range selected
 			var inRange = data.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
 													{column: 1, minValue: min, maxValue: max}]);
+													
 			for(i=0; i<inRange.length; i++){
 			  selected.push({row: inRange[i], col: null});
 			}
-	    
-		    inRange = dataByHour.getFilteredRows([{column:0, minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max},
-														{column: 1, minValue: min, maxValue: max}]);
-			var averages = {};
-			var label;
-			var cols = dataView.getViewColumns();
-			for (col = 4; col < cols.length; col += 3){
-			  label = data.getColumnLabel(cols[col]);
-			  averages[label] = 0;
-			  counter = 0;
-			  for (j = 0; j < inRange.length; j++){
-				curr = dataByHour.getValue(inRange[j], colDir[label]);
-				if (curr != null){
-				  averages[label] += curr;
-				  counter++;
-				}
-			  }
-		  
-			  averages[label] = Math.round(10*averages[label]/counter)/10;
-			}
-		
-			if (changeWidth){
-				options.chartArea.height -= 60;
-				drawChart();
-			}
-		
+			for (i=0; i < selected.length; i++)
+			console.log( selected[i].row + "Selected");
+			
 			history.setSelection(selected);
-	  
-			var text = "<ul>";
-			for (var fact in averages){
-			  text += "<li><span>Average" + fact + ":" + averages[fact] + unitDir[fact] + "</span></li>";
-
-			}
-	
-			text += "</ul>";
-			extraText.innerHTML = text;
-
 		
-			console.log(averages);
+	  		if (cols.length > 4){
+				var text = "<ul>";
+				for (var fact in highAverages){
+					if (ele.id == "highStress"){
+			  			text += "<li><span class='currRan'>Average " + fact + ":" + highAverages[fact] + unitDir[fact] +
+			 					" when you have high Stress</span><br/>";
+						text += "<span class='otherRan'>Average " + fact + ":" + lowAverages[fact] + unitDir[fact] +
+						 		" when low stress</span></li>";
+					}else{
+				  		text += "<li><span class='currRan'>Average " + fact + ":" + lowAverages[fact] + unitDir[fact] + 
+								" when you have low stress</span><br/>";
+						text += "<span class='otherRan'>Average " + fact + ":" + highAverages[fact] + unitDir[fact] + 
+								" when high stress</span></li>";
+					}
+					extraText.innerHTML = text;
+				}
+				text += "</ul>";
+			}
+			
 			}else{
-				options.chartArea.height += 60;
+				options.chartArea.height = 245;
 				drawChart();
 				extraText.innerHTML = "";
 			}			
@@ -521,8 +562,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 
 	  function testHandler(e){
-			$("#testOverlay").css("left", e.pageX + 10);
-			$("#testOverlay").css("top", e.pageY + 84);
+			$("#testOverlay").css("left", e.pageX + 20);
+			$("#testOverlay").css("top", e.pageY + 75);
 			$("#testOverlay").show();
 
 	}
@@ -619,12 +660,16 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			display: inline;
 	  
 }
+
+	  .otherRan{
+		font-size: 10px;
+	}
 	  
 	  input[type="radio"]{
 		display: inline; 
 	  }
 	  
-		#testOverlay{
+/*		#testOverlay{
 			-moz-border-radius: 5px;
 			border-radius: 5px;
 			position: absolute;
@@ -633,7 +678,30 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			color: white;
 			font-size: 12px;
 	}
+	*/
+	#testOverlay
+	{
+	  font-size: 12px;
+	  position: absolute;
+	  z-index: 999;
+	  padding: 5px;
+	  border: 2px solid #ccc;
+	  opacity: .9;
+	  background-color: #ddd;
+	  background-image: -webkit-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
+	  background-image: -moz-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
+	  background-image: -ms-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
+	  background-image: -o-linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
+	  background-image: linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,0));
+	  -moz-border-radius: 4px;
+	  border-radius: 4px;
+	  -moz-box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.5) inset;
+	  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.5) inset;
+	  box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.5) inset;
+	  text-shadow: 0 1px 0 rgba(255,255,255,.4);
 	
+	  border-top-color: #ccc;
+	}
 	
 </style>
 
@@ -659,7 +727,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	<input type="checkbox" id="highStress" class= "stressTog" onClick="filterByStress(this)" >High Stress	</input>
 	<input type="checkbox"id="lowStress" class= "stressTog" onClick="filterByStress(this)">Low Stress	</input>
 	<div id="visualization" style="width: 480px; height: 320px; "></div>
-	<div id="testOverlay" style="display: none"></div>
+	<div id="testOverlay" style="display: none"><div></div></div>
 	<div id="extraText"></div>
 	
 	<button id="readingButt" onClick="takeReading()">Take Reading</button>
