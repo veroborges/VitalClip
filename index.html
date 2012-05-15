@@ -224,7 +224,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			break;
 		  default:
 			history.draw(dataView, options);
-			currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat) + " - " + options.hAxis.viewWindow.max.toString(timeFormat);
+			currentRangeText.innerHTML = options.hAxis.viewWindow.min.toString(timeFormat) + " - " + 
+			options.hAxis.viewWindow.max.toString(timeFormat);
 		}
 
 	  }
@@ -316,6 +317,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		
 		options.chartArea.height = 245;
 		currentRange = range;
+		assignColors();
 		drawChart();
 		
 		if ($('#highStress').prop("checked")){
@@ -343,16 +345,22 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		cols = dataView.getViewColumns();
 		
 	   for(var i=0; i< cols.length; i++) {
-		 if (cols[i] == 9) 
-		   document.getElementById('sleepToggle').checked = "checked";
-		 if (cols[i] == 13) 
-		   document.getElementById('tempToggle').checked = "checked";
-	  }
+		 if (cols[i] == 10) 
+		  $('#sleepToggle').prop("checked",true);
+		 if (cols[i] == 14) 
+		   $('#tempToggle').prop("checked",true);
+		 if (cols[i] == 18) 
+		   $('#activityToggle').prop("checked",true);
+		}
+		
 		currData = data;
 		currView = dataView;
 		extraText.innerHTML = "";
+		options.hAxis.format = "MM/dd/yy";		
+		
 	  }
-	  
+	
+	  	
 	  function setDayView(){
 		options.chartArea.height = 185;
 
@@ -386,7 +394,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		extraText.innerHTML = text;
 		options.hAxis.format = "ha";
 		currData = dataByHour;
-		currView = databyHourView;			
+		currView = databyHourView;					
 	  }
 	  
 	  
@@ -435,34 +443,13 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		  $("#testOverlay").hide();
 			if (ele.checked){	
 			  dataView.setColumns(dataView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
-			  databyHourView.setColumns(dataView.getViewColumns());
+			  databyHourView.setColumns(databyHourView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
 			}else{
 			  dataView.hideColumns([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]);
-			  databyHourView.setColumns(dataView.getViewColumns());
+			  databyHourView.hideColumns([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]);
 			}	 
 			
-			var filtered = false;
-			if ($('#highStress').prop("checked") || $('#lowStress').prop("checked")){
-				filtered = true;
-			}
-			
-			options.series = {};
-			var label; var max = 0; 
-			var range;
-			var cols = currView.getViewColumns();
-			var counter = 0;
-			  for (i=1; i< cols.length; i+=3){
-				 range = data.getColumnRange(cols[i]);
-				 if (filtered == false || i == 1)	
-				 	max = ((range.max + 1) > max) ? range.max + 1 : max;
-				 label = currData.getColumnLabel(cols[i]);
-				 console.log(label +  colorDir[label]);
-				 options.series[counter] = {};
-				 options.series[counter]["color"] = colorDir[label];
-				 counter++;
-				}
-   
-			options.vAxis.viewWindow.max = max;
+			assignColors();
 
 			console.log(options.series);
 			drawChart();
@@ -473,6 +460,34 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 				filterByStress($('#lowStress').get(0));
 			}
 	  }
+	
+	function assignColors(){
+		var filtered = false;
+		if ($('#highStress').prop("checked") || $('#lowStress').prop("checked")){
+			filtered = true;
+		}
+		
+		options.series = {};
+		var label; var max = 0; 
+		var range;
+		var cols = currView.getViewColumns();
+		var counter = 0;
+		  for (i=1; i< cols.length; i+=3){
+			 range = currData.getColumnRange(cols[i]);
+			 if (filtered == false || i == 1)	
+			 	max = ((range.max + 1) > max) ? range.max + 1 : max;
+			 
+			 label = currData.getColumnLabel(cols[i]);
+			 console.log(label +  colorDir[label]);
+			if ((currentRange != "Day") || (currentRange == "Day" && label != "Sleep" && label != "Activity" && label != "Temperature")){
+				 options.series[counter] = {};
+				 options.series[counter]["color"] = colorDir[label];
+				 counter++;
+			}
+		  }
+
+		options.vAxis.viewWindow.max = max;
+	}
 	
 	function filterByStress(ele){
 		extraText.innerHTML = "";
