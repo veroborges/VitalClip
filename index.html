@@ -48,6 +48,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  var unitDir = {"Stress" : "", "Heart Rate" : "bpm", "Sleep" : "h", "Temperature" : "\u00B0" + "F", "Activity" : "", "Mood" : ""};
 	  var colorDir = {"Stress" : "grey", "Heart Rate" : "#e15b4f", "Sleep" : "#5091b9",
 	 	"Temperature" : "#cfcb4e", "Activity" : "#86bf58", "Mood" : "#6058ab"};
+	  var abvDir = {"Stress" : "Stress", "Heart Rate" : "  HR", "Sleep" : "Sleep", "Temperature" : "Temp", "Activity" : "Act", "Mood" : "Mood"};
+	
 	
 	  
 	  /***** drawVisualization *****
@@ -173,7 +175,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					displayAnnotations: true, tooltip: {trigger: 'none'}, curve: "function",
 					backgroundColor: {fill: "white"},
 					vAxis: { gridlines: {count: 0}, viewWindowMode: 'explicit', viewWindow : {min: range.min - 1, max: range.max + 1}},
-					series: [{color: 'grey'}], pointSize: 8, lineWidth: 2}; 
+					series: [{color: 'grey'}], pointSize: 0, lineWidth: 2}; 
 	  
 	  MAX = options.hAxis.viewWindow.max.clone();	 
 	  MIN = options.hAxis.viewWindow.min.clone();	  
@@ -239,7 +241,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 				currData.setValue(annot[0], i + 1, "");  
 			}
 			  console.log(currData.getColumnLabel(i+1));
-			  currData.setValue(halfValue - 1, i + 1, column);  
+			  currData.setValue(halfValue, i + 1, column);  
 			  i += 4;
 		  }
 	  }
@@ -617,7 +619,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 
 	  function testHandler(e){
 			$("#testOverlay").css("left", e.pageX - 51);
-			$("#testOverlay").css("top", e.pageY + 51);
+			$("#testOverlay").css("top", e.pageY + 45);
 			$("#testOverlay").show();
 
 	}
@@ -635,7 +637,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			  var label;
 			  var day = currData.getValue(ele[0].row, 0);
 			  day = (currentRange == "Day") ? day.toString("htt") : day.toString("MM/dd");
-			  var htmlText = "<span><b>" + day + "</b></span><br/>";
+			  var dayTxt = "<span>" + day + "</span>";
+			  var htmlText = "";
 			  var cols = currView.getViewColumns();
 			  console.log("col: " + cols);
 			
@@ -646,14 +649,15 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					if (currData.getValue(ele[0].row, cols[i+2]) != false){
 						isInput = true;
 						value = currData.getValue(ele[0].row, colDir[label]);
-						htmlText += "<span>" + label + " ~ " + value + unitDir[label] + "</span><br/>";
+						htmlText += "<span>&#x2022 " + abvDir[label] + ": " + value + unitDir[label] + "</span><br/>";
 					}else{
-						htmlText += "<span>" + label + " ~ " + "No Input</span><br/>";
+						htmlText += "<span>&#x2022 " + abvDir[label] + ":" + "No Input</span>";
 					}
 				}
 			}
 		    
 		    if (isInput == true){
+				$("#daySect").html(dayTxt);
 				$("#contentPopUp").html(htmlText);
 			  	$("#testOverlay").click(function(e){
 				selectPopUpHandler(e, currData.getValue(ele[0].row, 0));
@@ -729,6 +733,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  position: absolute;
 	}
 	
+	
 	#contentPopUp{
 		background: #eeeee7; /* Old browsers */
 		background: -moz-linear-gradient(top,  #eeeee7 1%, #e4e2dd 100%); /* FF3.6+ */
@@ -737,9 +742,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		background: -o-linear-gradient(top,  #eeeee7 1%,#e4e2dd 100%); /* Opera 11.10+ */
 		background: -ms-linear-gradient(top,  #eeeee7 1%,#e4e2dd 100%); /* IE10+ */
 		background: linear-gradient(top,  #eeeee7 1%,#e4e2dd 100%); /* W3C */
-
+		padding-top: 4px;
 		border-right:1px solid rgb(189,189,185);
 		border-left:1px solid rgb(189,189,185);
+		
 		margin-top: -3px;
 		width: 97%;
 		margin-left: 1px;
@@ -747,13 +753,40 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	
 	#contentPopUp span{
 		margin-left: 4px;
+		padding-bottom: 4px;
+		color: #393939;
 	}
 	
-	#topPopUp{
+	#daySect span{
+		margin-left: 4px;
+		margin-bottom: 2px;
 	}
 	
-	#botPopUp{
+	#dateLine{
+		height: 1px;
+		background-color: rgb(189,189,185);
+		margin-top: -1px;
 	}
+	
+	#daySect{
+		background-color: #393939;
+		border-radius: 3px 3px 0 0;
+		border-top:1px solid rgb(189,189,185);
+		margin-left: 1px;
+		width: 99%;
+		color: white;
+		font-weight: bold;
+		padding: 3px 0px;
+		border-bottom: 1px solid #cfcb4e;		
+	}
+	
+	#arrowPopUp{
+		position: absolute;
+		left: 100px;
+		top: 44%;
+	}
+	
+	
 </style>
 
   </head>
@@ -779,8 +812,9 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	<input type="checkbox"id="lowStress" class= "stressTog" onClick="filterByStress(this)">Low Stress	</input>
 	<div id="visualization" style="width: 480px; height: 320px; "></div>
 	<div id="testOverlay" style="display: none">
-		<img id="topPopUp" src="img/popup_box_slice_01.png"/>	
+		<div id="daySect"></div>
 		<div id="contentPopUp"></div>
+		<img id="arrowPopUp" src="img/arrow.png"/>	
 		<img id="botPopUp" src="img/popup_box_slice_03.png"/>	
 	</div>
 	<div id="extraText"></div>
