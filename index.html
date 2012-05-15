@@ -397,7 +397,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		
 		var text = "<ul>";
 		text += "<li><span>Average Sleep: " + data.getValue(day[0], colDir["Sleep"]) + " hours</span></li>";
-		text += "<li><span>Average Temp: " + data.getValue(day[0], colDir["Temperature"]) + unitDir["Temperature"] +"</span></li>";
+		text += "<li><span>Average Weather: " + data.getValue(day[0], colDir["Temperature"]) + unitDir["Temperature"] + " " +
+			data.getValue(day[0], data.getNumberOfColumns() - 1) + "</span></li>";
 		text += "<li><span>Average Activity: " + data.getValue(day[0], colDir["Activity"]) + unitDir["Activity"] +"</span></li>";
 		text += "</ul>";
 		
@@ -691,6 +692,10 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 							else
 								txt = "ave."
 							value = txt;
+						}
+						if (label == "Temperature"){
+							var weath = data.getValue(ele[0].row, data.getNumberOfColumns() - 1);
+							dayTxt = "<span>" + day + ": " + weath + "</span>";
 						}
 						htmlText += "<span>&#x2022 " + abvDir[label] + ": " + value + unitDir[label] + "</span><br/>";
 					}else{
