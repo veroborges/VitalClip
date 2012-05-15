@@ -67,7 +67,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		var query = new google.visualization.Query(queryURL);
 	   
 		// Apply query language.
-		query.setQuery("Select A, B, C, D, E, F, G Order BY A");
+		query.setQuery("Select A, B, C, D, E, F, G, H Order BY A");
 	  
 		// Send the query with a callback function.
 		query.send(handleQueryResponse);
@@ -90,9 +90,11 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  dataView.setColumns([0]);
 	  
 	   calcCounter = 0;
-	   for (i=1; i < (initData.getNumberOfColumns()); i++){
+	   for (i=1; i < initData.getNumberOfColumns() - 1; i++){
 		 dataView.setColumns(dataView.getViewColumns().concat([i,{calc:convertToStressScale, type:'number', label:initData.getColumnLabel(i)}]));
-	   }		 
+	   }
+	
+	  dataView.setColumns(dataView.getViewColumns().concat([initData.getNumberOfColumns() - 1]))
 
 		 
 	  data = dataView.toDataTable();
@@ -124,18 +126,21 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			  averages[col] += curr;
 			  counter++;
 			}
-		  }
-		  
-		   //todo: fix to be null not zero
-	      if (averages[col] != 0){
-		  	averages[col] = Math.round(averages[col]/counter*10)/10;
-		  }else{
-			averages[col] = null;
 		 }
+		  
+			if (col == (data.getNumberOfColumns()-1)){
+				averages[col] = data.getValue(oneDay[0], col);		
+			}
+			else if (col != 0){ //todo: fix to be null not zero
+		  		averages[col] = Math.round(averages[col]/counter*10)/10;
+			}else{
+				averages[col] = null;
+		 	}
 		}
 		
 		firstReading = start.clone();
 		reading = data.getValue(oneDay[0], 0);
+		
 		if (Date.compare(firstReading, reading) == -1){
 	 		data.insertRows(oneDay[0], 1);
 	 		data.setValue(oneDay[0], 0, firstReading);
@@ -235,7 +240,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		  var annot = currData.getFilteredRows([{column: 3,	 value: "Stress"}]);
 		  var rows = currData.getFilteredRows([{column: 0,	minValue: options.hAxis.viewWindow.min, maxValue: options.hAxis.viewWindow.max}]);
 		  var halfValue = rows[Math.round((rows.length-1)/2)];
-		  for (i=2; i< currData.getNumberOfColumns();){
+		  for (i=2; i< currData.getNumberOfColumns() -1;){
 			  column = currData.getColumnLabel(i);
 			  console.log(column);
 			  if (annot.length > 0){
@@ -249,7 +254,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 	  function addExtraColumns(dataTab){
 		console.log("columns" + dataTab.getNumberOfColumns());
-		for (i=2; i< dataTab.getNumberOfColumns();){
+		for (i=2; i< dataTab.getNumberOfColumns() - 1;){
 			dataTab.insertColumn(i+1, 'string', 'text');
 			dataTab.setColumnProperty(i+1, "role", "annotation");
 			dataTab.insertColumn(i+2, 'boolean', "certainty");
@@ -311,19 +316,25 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		options.hAxis.viewWindow.min = min; 
 		options.hAxis.viewWindow.max = max; 
 
-		if (currentRange == "Day" && range != "Day"){
-		  removeDayView();
+		var switched = (currentRange == "Day" && range != "Day") ? true : false;
+		currentRange = range;
+
+		if (switched){
+		  removeDayView();	
+		  assignColors();
+		}else if (currentRange == "Day"){
+			assignColors();
 		}
 		
-		options.chartArea.height = 245;
-		currentRange = range;
-		assignColors();
 		drawChart();
 		
 		if ($('#highStress').prop("checked")){
-			console.log("heeere");
+			options.chartArea.height = 245;
+			drawChart();
 			filterByStress($('#highStress').get(0));
 		}else if ($('#lowStress').prop("checked")){
+			options.chartArea.height = 245;
+			drawChart();
 			filterByStress($('#lowStress').get(0));
 		}
 	
@@ -428,18 +439,20 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 		options.hAxis.viewWindow.min = min; 
 		options.hAxis.viewWindow.max = max; 
 		extraText.innerHTML = "";
-		options.chartArea.height = 245;
 		drawChart();
 		
 		if ($('#highStress').prop("checked")){
+			options.chartArea.height = 245;
+			drawChart();
 			filterByStress($('#highStress').get(0));
 		}else if ($('#lowStress').prop("checked")){
+			options.chartArea.height = 245;
+			drawChart();
 			filterByStress($('#lowStress').get(0));
 		}
 	  }
 	  
 	  function checkFactors(ele){
-		  options.chartArea.height = 245;
 		  $("#testOverlay").hide();
 			if (ele.checked){	
 			  dataView.setColumns(dataView.getViewColumns().concat([Number(ele.value),Number(ele.value)+1 , Number(ele.value)+2]));
@@ -455,8 +468,12 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			drawChart();
 			
 			if ($('#highStress').prop("checked")){
+				options.chartArea.height = 245;
+				drawChart();
 				filterByStress($('#highStress').get(0));
 			}else if ($('#lowStress').prop("checked")){
+				options.chartArea.height = 245;
+				drawChart();
 				filterByStress($('#lowStress').get(0));
 			}
 	  }
@@ -520,7 +537,8 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 			var lowAverages = {};
 			var label;
 			var cols = [];
-		    $('#formFactor input[type=checkbox]').each(function () {
+		    
+			$('#formFactor input[type=checkbox]').each(function () {
 				 if (this.checked && $(this).val() != 2) {
 				         cols.push(Number($(this).val()));
 				}
@@ -618,7 +636,7 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	  
 	 
 	  function convertToStressScale(dataTable, rowNum){
-		calcCounter < (dataTable.getNumberOfColumns()- 1) ? calcCounter++ : calcCounter = 1;
+		calcCounter < (dataTable.getNumberOfColumns()- 2) ? calcCounter++ : calcCounter = 1;
 		
 		var range = dataTable.getColumnRange(calcCounter);
 		var currVal = dataTable.getValue(rowNum, calcCounter);
@@ -664,6 +682,16 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 					if (currData.getValue(ele[0].row, cols[i+2]) != false){
 						isInput = true;
 						value = currData.getValue(ele[0].row, colDir[label]);
+						if (i == 1){
+							var txt;
+							if (value > (stressAve + 1))
+								txt = "high";
+						    else if (value < (stressAve - 1))
+								txt = "low";
+							else
+								txt = "ave."
+							value = txt;
+						}
 						htmlText += "<span>&#x2022 " + abvDir[label] + ": " + value + unitDir[label] + "</span><br/>";
 					}else{
 						htmlText += "<span>&#x2022 " + abvDir[label] + ":" + "No Input</span>";
@@ -836,7 +864,5 @@ Apache license (http://www.apache.org/licenses/LICENSE-2.0.html)
 	
 	<button id="readingButt" onClick="takeReading()">Take Reading</button>
 	<div id="readFeedback"></div>
-	
-
   </body>
 </html>
